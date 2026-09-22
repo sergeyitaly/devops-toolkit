@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Engine tests
+        run: node test/engine.test.js
+      - name: UI tests
+        run: node test/ui.test.js
+      - name: Security tests
+        run: node test/security.test.js
+      - name: index.html matches src/
+        run: node tools/build.mjs --check
+      - name: CSP hashes are current
+        run: node tools/csp.mjs --check
+      - name: Tool icons and manifest shortcuts are current
+        run: node tools/tool-icons.mjs --check

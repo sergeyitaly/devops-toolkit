@@ -1,0 +1,12 @@
+{
+  "name": "devops-pocket-toolkit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Twelve offline DevOps utilities in one installable HTML page.",
+  "license": "MIT",
+  "scripts": {
+    "build": "node tools/build.mjs && node tools/csp.mjs",
+    "test": "node test/engine.test.js && node test/ui.test.js && node test/security.test.js && node tools/build.mjs --check && node tools/csp.mjs --check && node tools/tool-icons.mjs --check",
+    "icons": "node tools/svg-to-icons.mjs icon.svg icons && node tools/tool-icons.mjs"
+  }
+}

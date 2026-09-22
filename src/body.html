@@ -1,0 +1,39 @@
+</style>
+</head>
+<body>
+<header>
+<button id="back" class="icon-btn" type="button" aria-label="Back to all tools" hidden>&#8592;</button>
+<span class="mark" aria-hidden="true">&gt;_</span>
+<h1 id="title">DevOps Pocket Toolkit</h1>
+<button id="install" class="btn" type="button">Install</button>
+</header>
+
+<main>
+<section id="home">
+<label class="field">
+<span class="lbl sr-only">Search</span>
+<input id="search" class="in" type="search" placeholder="Search twelve tools: cidr, base64, jwt, yaml..." autocomplete="off" autocapitalize="off" spellcheck="false">
+</label>
+<div class="homebar">
+<button id="selectmode" class="btn ghost" type="button">Select tools</button>
+<span id="selecthint" class="note">or long-press any tool to put it on your home screen</span>
+</div>
+<div id="grid" class="grid"></div>
+<p id="empty" class="empty" hidden>No tool matches that.</p>
+</section>
+
+<section id="tool" hidden>
+<div id="panel"></div>
+</section>
+</main>
+
+<footer>
+<p id="swstate">Loading the offline copy.</p>
+<p>No backend, no accounts, no analytics, no cookies, no third-party code. Everything you type stays in this tab. The only thing stored on your device is which tool you had open last.</p>
+</footer>
+
+<div id="selbar" role="toolbar" aria-label="Selected tools" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="sheet" hidden><div class="sheet-body" id="sheetbody"></div></div>
+
+<script>

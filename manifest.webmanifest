@@ -1,0 +1,194 @@
+{
+  "name": "DevOps Pocket Toolkit",
+  "short_name": "DevOps Toolkit",
+  "description": "Twelve offline DevOps utilities in one page: CIDR and subnet maths, base64, URL encoding, regex, JWT, timestamps, UUIDs, passwords, hashes, JSON and YAML.",
+  "id": "devops-pocket-toolkit",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0e13",
+  "theme_color": "#0b0e13",
+  "categories": [
+    "utilities",
+    "developer"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "CIDR Calculator",
+      "short_name": "CIDR",
+      "description": "Network, broadcast, mask and host range",
+      "url": "./#/cidr",
+      "icons": [
+        {
+          "src": "./icons/tools/cidr.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Subnet Splitter",
+      "short_name": "Subnets",
+      "description": "Carve a block into equal subnets",
+      "url": "./#/subnet",
+      "icons": [
+        {
+          "src": "./icons/tools/subnet.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Base64",
+      "short_name": "Base64",
+      "description": "Encode and decode base64",
+      "url": "./#/base64",
+      "icons": [
+        {
+          "src": "./icons/tools/base64.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "URL Encoder",
+      "short_name": "URL",
+      "description": "Percent-encoding and query parsing",
+      "url": "./#/url",
+      "icons": [
+        {
+          "src": "./icons/tools/url.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Regex Tester",
+      "short_name": "Regex",
+      "description": "Matches, groups and replacements",
+      "url": "./#/regex",
+      "icons": [
+        {
+          "src": "./icons/tools/regex.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "JWT Decoder",
+      "short_name": "JWT",
+      "description": "Header, claims and expiry",
+      "url": "./#/jwt",
+      "icons": [
+        {
+          "src": "./icons/tools/jwt.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Unix Timestamp",
+      "short_name": "Epoch",
+      "description": "Epoch to date, and back",
+      "url": "./#/time",
+      "icons": [
+        {
+          "src": "./icons/tools/time.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "UUID Generator",
+      "short_name": "UUID",
+      "description": "Random v4 and time-ordered v7",
+      "url": "./#/uuid",
+      "icons": [
+        {
+          "src": "./icons/tools/uuid.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Password Generator",
+      "short_name": "Password",
+      "description": "Random secrets with an entropy figure",
+      "url": "./#/password",
+      "icons": [
+        {
+          "src": "./icons/tools/password.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Hash Calculator",
+      "short_name": "Hash",
+      "description": "MD5, SHA-1 and SHA-256",
+      "url": "./#/hash",
+      "icons": [
+        {
+          "src": "./icons/tools/hash.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "JSON Formatter",
+      "short_name": "JSON",
+      "description": "Pretty-print, minify, find the error",
+      "url": "./#/json",
+      "icons": [
+        {
+          "src": "./icons/tools/json.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "YAML Validator",
+      "short_name": "YAML",
+      "description": "Errors by line, and the JSON it means",
+      "url": "./#/yaml",
+      "icons": [
+        {
+          "src": "./icons/tools/yaml.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

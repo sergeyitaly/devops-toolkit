@@ -1,0 +1,4582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DevOps Pocket Toolkit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Twelve offline DevOps utilities in one page: CIDR and subnet maths, base64, URL encoding, regex, JWT, timestamps, UUIDs, passwords, hashes, JSON and YAML.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-g8Sv8zspajZjo/e6zXyWAN/NLWS5/DfH0E31ELZMhIs='; style-src 'sha256-Pn+En981xDANvzCyOcv/f7DMEYFXcNJJF+ELUgtOjP4='; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'">
+<meta name="theme-color" content="#0b0e13" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f1f4f9" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" id="touchicon" href="./icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" id="apptitle" content="DevOps Toolkit">
+<style>
+/* Every colour lives here twice: once for dark, once for light below. The
+   rest of the file only ever names a token, so the two themes cannot drift. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0e13;
+  --panel: #141a23;
+  --panel-2: #1b2330;
+  --well: #0d1219;
+  --line: #263041;
+  --line-2: #35506a;
+  --ink: #e6edf3;
+  --dim: #94a3b8;
+  --accent: #5eead4;
+  --accent-ink: #06231f;
+  --accent-2: #38bdf8;
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --sel: #16232c;
+  --hit: rgba(94, 234, 212, 0.22);
+  --veil: rgba(3, 6, 10, 0.72);
+  --bar: rgba(11, 14, 19, 0.92);
+  --bar-2: rgba(20, 26, 35, 0.97);
+  --err-line: #5b2a2a;
+  --err-bg: #2a1414;
+  --err-ink: #fecaca;
+  --warn-line: #5b4a1e;
+  --warn-bg: #26200f;
+  --warn-ink: #fde68a;
+  --ok-line: #1e5b46;
+  --ok-bg: #0f261d;
+  --ok-ink: #bbf7d0;
+  --radius: 12px;
+  --gutter: 16px;
+}
+
+/* Follows the phone or laptop setting; there is no switch to forget about.
+   Same tokens, same names, so nothing below this block needs to know. */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f1f4f9;
+    --panel: #ffffff;
+    --panel-2: #e9eef6;
+    --well: #ffffff;
+    --line: #cfd8e4;
+    --line-2: #8aa0ba;
+    --ink: #10141b;
+    --dim: #51607a;
+    --accent: #0f6f68;
+    --accent-ink: #ffffff;
+    --accent-2: #0369a1;
+    --good: #15803d;
+    --warn: #92600a;
+    --bad: #b4232c;
+    --sel: #ddf1ee;
+    --hit: rgba(15, 111, 104, 0.28);
+    --veil: rgba(15, 23, 42, 0.42);
+    --bar: rgba(241, 244, 249, 0.92);
+    --bar-2: rgba(255, 255, 255, 0.97);
+    --err-line: #e7a3a3;
+    --err-bg: #fdecec;
+    --err-ink: #8a1c1c;
+    --warn-line: #dcb964;
+    --warn-bg: #fbf1da;
+    --warn-ink: #75500a;
+    --ok-line: #80cfab;
+    --ok-bg: #e6f6ee;
+    --ok-ink: #0b5a3a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  overflow-wrap: anywhere;
+  -webkit-text-size-adjust: 100%;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+}
+
+/* ---------- shell ---------- */
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 10px) var(--gutter) 10px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+
+header h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mark {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-ink);
+  font: 700 13px/26px ui-monospace, Menlo, Consolas, monospace;
+  text-align: center;
+}
+
+main {
+  padding: 14px var(--gutter) calc(env(safe-area-inset-bottom) + 40px);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+footer {
+  padding: 0 var(--gutter) calc(env(safe-area-inset-bottom) + 24px);
+  max-width: 900px;
+  margin: 0 auto;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+footer a { color: var(--dim); }
+
+/* ---------- controls ---------- */
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.btn {
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; }
+.btn:focus-visible, .in:focus-visible, .v:focus-visible, .tile:focus-visible, .chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.icon-btn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-2);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 2px;
+}
+
+.field { display: block; margin: 0 0 10px; }
+
+.lbl {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--dim);
+  font-size: 12px;
+  font-weight: 550;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.in {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--well);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+textarea.in {
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+select.in { appearance: none; background-image: none; }
+
+.opts { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 10px; }
+
+.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--dim);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.chk input { accent-color: var(--accent); margin: 0; }
+.chipicon { width: 16px; height: 16px; border-radius: 4px; }
+.chk.on { color: var(--ink); border-color: var(--line-2); }
+
+.inline { display: flex; gap: 10px; flex-wrap: wrap; }
+.inline > .field { flex: 1 1 140px; margin-bottom: 10px; }
+
+/* ---------- cards and output ---------- */
+
+.card {
+  margin: 0 0 14px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.card-t {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.orow {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+
+.orow:first-child { border-top: 0; }
+
+.k {
+  flex: 0 0 38%;
+  max-width: 180px;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+.v {
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.v:hover { color: var(--accent); }
+.orow.accent .v { color: var(--accent); }
+.orow.good .v { color: var(--good); }
+.orow.warn .v { color: var(--warn); }
+.orow.bad .v { color: var(--bad); }
+
+.out {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--well);
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.err, .warnbox, .okbox {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.err { border-color: var(--err-line); background: var(--err-bg); color: var(--err-ink); }
+.warnbox { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); }
+.okbox { border-color: var(--ok-line); background: var(--ok-bg); color: var(--ok-ink); }
+
+.note {
+  margin: 8px 0 0;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+.hit { background: var(--hit); border-radius: 3px; }
+
+.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tbl th, .tbl td { padding: 6px 8px; text-align: left; border-top: 1px solid var(--line); }
+.tbl th { color: var(--dim); font-weight: 550; border-top: 0; }
+.tbl td { font-family: ui-monospace, Menlo, Consolas, monospace; }
+.scroll { overflow-x: auto; }
+
+/* ---------- home ---------- */
+
+/* three across, four down: the twelve tools are one screenful, laid out
+   like the home screen this ends up living on */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 9px 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.tile:hover { border-color: var(--line-2); }
+
+.tile b {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.tileicon {
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+}
+
+/* the one-line description needs room to be worth showing. It carries its own
+   class because the selection dot is a span inside the tile too, and a bare
+   `.tile span` rule turns the dots on with it. */
+.tileblurb {
+  display: none;
+  margin-top: 5px;
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.empty { padding: 24px 4px; color: var(--dim); text-align: center; }
+
+/* ---------- toast and sheet ---------- */
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 22px);
+  z-index: 20;
+  padding: 9px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 13px;
+  transform: translate(-50%, 16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+}
+
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+#sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--veil);
+}
+
+#sheet[hidden] { display: none; }
+
+.sheet-body {
+  width: 100%;
+  max-width: 520px;
+  max-height: 84vh;
+  overflow-y: auto;
+  padding: 18px var(--gutter) calc(env(safe-area-inset-bottom) + 18px);
+  border-radius: 16px 16px 0 0;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.sheet-body h2 { margin: 0 0 10px; font-size: 17px; }
+
+/* the sheet's controls stay on one line too */
+.sheet-body .btns {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.sheet-body .btn {
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.sheet-body .btn.primary { flex: 1 1 auto; }
+
+@media (min-width: 400px) {
+  .sheet-body .btns { gap: 8px; }
+  .sheet-body .btn { padding: 9px 13px; font-size: 13px; }
+}
+.sheet-body ol { margin: 0 0 12px; padding-left: 20px; }
+.sheet-body li { margin: 6px 0; }
+
+.share-glyph {
+  display: inline-block;
+  width: 14px;
+  height: 17px;
+  margin: 0 2px -3px;
+  vertical-align: baseline;
+}
+
+.offscreen { position: fixed; left: -9999px; top: 0; opacity: 0; }
+
+@media (min-width: 520px) {
+  .tile { padding: 12px 8px; }
+  .tile b { font-size: 12.5px; }
+  .tileicon { width: 38px; height: 38px; margin-bottom: 8px; }
+}
+
+@media (min-width: 720px) {
+  .k { flex-basis: 30%; }
+  main { padding-top: 20px; }
+  .tile { padding: 14px 12px; border-radius: var(--radius); }
+  .tile b { font-size: 14px; }
+  .tileblurb { display: block; }
+  .tileicon { width: 44px; height: 44px; margin-bottom: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* ---------- examples and help ---------- */
+
+.exwrap { margin: 2px 0 12px; }
+.exwrap .opts { margin: 0; }
+
+details.help {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 13px;
+}
+
+details.help summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+details.help[open] summary { margin-bottom: 8px; }
+details.help ul { margin: 0; padding-left: 18px; }
+details.help li { margin: 7px 0; }
+
+.sheet-body .lbl { margin-top: 14px; }
+.sheet-body .opts { max-height: 38vh; overflow-y: auto; }
+
+/* ---------- selecting tools on the home screen ---------- */
+
+.homebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.homebar .note { display: none; margin: 0; }
+.homebar .btn { padding: 6px 11px; font-size: 12px; }
+
+@media (min-width: 520px) {
+  .homebar .note { display: block; }
+}
+
+/* kept for screen readers where the placeholder already says it on screen */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#home .field { margin-bottom: 8px; }
+#home .in { padding: 8px 11px; }
+
+.tile { position: relative; }
+
+.pickdot {
+  display: none;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.grid.picking .pickdot { display: block; }
+.grid.picking .tile { padding-top: 20px; }
+
+.tile.sel { border-color: var(--accent); background: var(--sel); }
+.tile.sel .pickdot { background: var(--accent); border-color: var(--accent); }
+
+#selbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px var(--gutter) calc(env(safe-area-inset-bottom) + 8px);
+  border-top: 1px solid var(--line);
+  background: var(--bar-2);
+  backdrop-filter: blur(8px);
+}
+
+#selbar[hidden] { display: none; }
+
+#selbar .btn {
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+#selbar .btn.primary { flex: 1 1 auto; }
+
+/* the long half of the button label only when the screen can hold it */
+.wideword { display: none; }
+
+body.picking { padding-bottom: 64px; }
+
+@media (min-width: 400px) {
+  .wideword { display: inline; }
+}
+
+@media (min-width: 520px) {
+  #selbar { gap: 8px; }
+  #selbar .btn { padding: 9px 13px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<header>
+<button id="back" class="icon-btn" type="button" aria-label="Back to all tools" hidden>&#8592;</button>
+<span class="mark" aria-hidden="true">&gt;_</span>
+<h1 id="title">DevOps Pocket Toolkit</h1>
+<button id="install" class="btn" type="button">Install</button>
+</header>
+
+<main>
+<section id="home">
+<label class="field">
+<span class="lbl sr-only">Search</span>
+<input id="search" class="in" type="search" placeholder="Search twelve tools: cidr, base64, jwt, yaml..." autocomplete="off" autocapitalize="off" spellcheck="false">
+</label>
+<div class="homebar">
+<button id="selectmode" class="btn ghost" type="button">Select tools</button>
+<span id="selecthint" class="note">or long-press any tool to put it on your home screen</span>
+</div>
+<div id="grid" class="grid"></div>
+<p id="empty" class="empty" hidden>No tool matches that.</p>
+</section>
+
+<section id="tool" hidden>
+<div id="panel"></div>
+</section>
+</main>
+
+<footer>
+<p id="swstate">Loading the offline copy.</p>
+<p>No backend, no accounts, no analytics, no cookies, no third-party code. Everything you type stays in this tab. The only thing stored on your device is which tool you had open last.</p>
+</footer>
+
+<div id="selbar" role="toolbar" aria-label="Selected tools" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="sheet" hidden><div class="sheet-body" id="sheetbody"></div></div>
+
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * Bytes, text and formatting. Everything below works on plain arrays
+ * of byte values so the same code runs in a browser and under the
+ * stub DOM the tests use - no TextEncoder, no Buffer, no btoa.
+ * ------------------------------------------------------------------ */
+
+var B64_STD = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+var B64_URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+function utf8Encode(str) {
+  var out = [], i, c, c2, cp;
+  for (i = 0; i < str.length; i++) {
+    c = str.charCodeAt(i);
+    if (c < 0x80) { out.push(c); continue; }
+    if (c < 0x800) { out.push(0xc0 | (c >> 6), 0x80 | (c & 63)); continue; }
+    if (c >= 0xd800 && c <= 0xdbff && i + 1 < str.length) {
+      c2 = str.charCodeAt(i + 1);
+      if (c2 >= 0xdc00 && c2 <= 0xdfff) {
+        cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+        out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+        i++;
+        continue;
+      }
+    }
+    if (c >= 0xd800 && c <= 0xdfff) { out.push(0xef, 0xbf, 0xbd); continue; } /* lone surrogate */
+    out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+  }
+  return out;
+}
+
+/* Lenient by design: a decoder that throws would turn "paste any base64" into
+   an error message, and seeing the replacement character is more useful. */
+function utf8Decode(bytes) {
+  var out = '', i = 0, n = bytes.length, b, cp, need, j, ok;
+  while (i < n) {
+    b = bytes[i] & 0xff;
+    if (b < 0x80) { out += String.fromCharCode(b); i++; continue; }
+    if (b >= 0xc2 && b <= 0xdf) { cp = b & 0x1f; need = 1; }
+    else if (b >= 0xe0 && b <= 0xef) { cp = b & 0x0f; need = 2; }
+    else if (b >= 0xf0 && b <= 0xf4) { cp = b & 0x07; need = 3; }
+    else { out += '\uFFFD'; i++; continue; }
+    ok = i + need < n;
+    for (j = 1; ok && j <= need; j++) {
+      if ((bytes[i + j] & 0xc0) !== 0x80) { ok = false; break; }
+      cp = (cp << 6) | (bytes[i + j] & 63);
+    }
+    if (!ok || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff)) { out += '\uFFFD'; i++; continue; }
+    if (cp < 0x10000) out += String.fromCharCode(cp);
+    else {
+      cp -= 0x10000;
+      out += String.fromCharCode(0xd800 + (cp >> 10), 0xdc00 + (cp & 1023));
+    }
+    i += need + 1;
+  }
+  return out;
+}
+
+function isPrintableUtf8(bytes) {
+  var i, b;
+  for (i = 0; i < bytes.length; i++) {
+    b = bytes[i] & 0xff;
+    if (b === 0) return false;
+    if (b < 0x09 || (b > 0x0d && b < 0x20)) return false;
+  }
+  return true;
+}
+
+function bytesToHex(bytes) {
+  var out = '', i, h;
+  for (i = 0; i < bytes.length; i++) {
+    h = (bytes[i] & 0xff).toString(16);
+    out += h.length === 1 ? '0' + h : h;
+  }
+  return out;
+}
+
+function bytesToB64(bytes, urlSafe, padded) {
+  var alpha = urlSafe ? B64_URL : B64_STD;
+  var out = '', i, a, b, c;
+  for (i = 0; i < bytes.length; i += 3) {
+    a = bytes[i] & 0xff;
+    b = i + 1 < bytes.length ? bytes[i + 1] & 0xff : -1;
+    c = i + 2 < bytes.length ? bytes[i + 2] & 0xff : -1;
+    out += alpha.charAt(a >> 2);
+    out += alpha.charAt(((a & 3) << 4) | (b < 0 ? 0 : b >> 4));
+    if (b < 0) { out += padded ? '==' : ''; break; }
+    out += alpha.charAt(((b & 15) << 2) | (c < 0 ? 0 : c >> 6));
+    if (c < 0) { out += padded ? '=' : ''; break; }
+    out += alpha.charAt(c & 63);
+  }
+  return out;
+}
+
+/* Accepts both alphabets, with or without padding, ignoring whitespace -
+   which is what a pasted token or a wrapped PEM body actually looks like. */
+function b64ToBytes(str) {
+  var clean = String(str).replace(/[\s\r\n]+/g, '');
+  var i, ch, v, bits = 0, acc = 0, out = [], seenPad = false, padCount = 0;
+  for (i = 0; i < clean.length; i++) {
+    ch = clean.charAt(i);
+    if (ch === '=') { seenPad = true; padCount++; continue; }
+    if (seenPad) return { ok: false, error: 'Padding "=" is not at the end (position ' + (i + 1) + ').' };
+    v = B64_STD.indexOf(ch);
+    if (v < 0) v = B64_URL.indexOf(ch);
+    if (v < 0) return { ok: false, error: 'Character ' + JSON.stringify(ch) + ' at position ' + (i + 1) + ' is not valid base64.' };
+    acc = (acc << 6) | v;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      out.push((acc >> bits) & 0xff);
+    }
+  }
+  if (padCount > 2) return { ok: false, error: 'Too much padding: ' + padCount + ' "=" characters.' };
+  if (bits >= 6) return { ok: false, error: 'Truncated base64: the last group has a leftover character.' };
+  if (bits > 0 && ((acc & ((1 << bits) - 1)) !== 0)) {
+    return { ok: true, bytes: out, warning: 'Non-canonical base64: the final character carries bits that decode to nothing.' };
+  }
+  return { ok: true, bytes: out };
+}
+
+/* ---------- numbers ---------- */
+
+function groupDigits(value) {
+  var s = String(value), neg = s.charAt(0) === '-', out = '';
+  if (neg) s = s.slice(1);
+  while (s.length > 3) {
+    out = ' ' + s.slice(-3) + out;
+    s = s.slice(0, -3);
+  }
+  return (neg ? '-' : '') + s + out;
+}
+
+function formatSize(n) {
+  var units = ['B', 'KB', 'MB', 'GB'], i = 0, v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return (i === 0 ? v : v.toFixed(v < 10 ? 2 : 1)) + ' ' + units[i];
+}
+
+function plural(n, one, many) {
+  return groupDigits(n) + ' ' + (n === 1 ? one : (many || one + 's'));
+}
+
+/* Big powers of two are shown exactly, because "3.4e38 addresses" tells a
+   network engineer nothing they can check. */
+function pow2(exp) {
+  return exp <= 53 ? String(Math.pow(2, exp)) : (BigInt(2) ** BigInt(exp)).toString();
+}
+
+
+/* ------------------------------------------------------------------ *
+ * IPv4 and IPv6 address maths.
+ *
+ * IPv4 uses 32-bit integers kept unsigned with >>> 0; IPv6 uses BigInt,
+ * because 128 bits does not fit anywhere else without a library.
+ * ------------------------------------------------------------------ */
+
+var V4_SPECIAL = [
+  ['0.0.0.0/8', 'this network', 'RFC 1122'],
+  ['10.0.0.0/8', 'private', 'RFC 1918'],
+  ['100.64.0.0/10', 'carrier-grade NAT', 'RFC 6598'],
+  ['127.0.0.0/8', 'loopback', 'RFC 1122'],
+  ['169.254.0.0/16', 'link-local', 'RFC 3927'],
+  ['172.16.0.0/12', 'private', 'RFC 1918'],
+  ['192.0.0.0/24', 'IETF protocol assignments', 'RFC 6890'],
+  ['192.0.2.0/24', 'documentation (TEST-NET-1)', 'RFC 5737'],
+  ['192.88.99.0/24', '6to4 relay anycast', 'RFC 7526'],
+  ['192.168.0.0/16', 'private', 'RFC 1918'],
+  ['198.18.0.0/15', 'benchmarking', 'RFC 2544'],
+  ['198.51.100.0/24', 'documentation (TEST-NET-2)', 'RFC 5737'],
+  ['203.0.113.0/24', 'documentation (TEST-NET-3)', 'RFC 5737'],
+  ['224.0.0.0/4', 'multicast', 'RFC 5771'],
+  ['240.0.0.0/4', 'reserved', 'RFC 1112'],
+  ['255.255.255.255/32', 'limited broadcast', 'RFC 8190']
+];
+
+/* Leading zeros are rejected: 010.1.1.1 is octal to some resolvers and
+   decimal to others, and that ambiguity has been an exploit more than once. */
+function parseIPv4(str) {
+  var parts = String(str).trim().split('.'), out = [], i, p, n;
+  if (parts.length !== 4) return null;
+  for (i = 0; i < 4; i++) {
+    p = parts[i];
+    if (!/^[0-9]{1,3}$/.test(p)) return null;
+    if (p.length > 1 && p.charAt(0) === '0') return null;
+    n = parseInt(p, 10);
+    if (n > 255) return null;
+    out.push(n);
+  }
+  return out;
+}
+
+function v4ToInt(octets) {
+  return ((octets[0] * 16777216) + (octets[1] << 16) + (octets[2] << 8) + octets[3]) >>> 0;
+}
+
+function intToV4(n) {
+  n = n >>> 0;
+  return [Math.floor(n / 16777216) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff].join('.');
+}
+
+function v4Mask(prefix) {
+  return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+}
+
+function v4PrefixFromMask(n) {
+  var i, first = -1;
+  for (i = 31; i >= 0; i--) {
+    if (((n >>> i) & 1) === 0) { first = 31 - i; break; }
+  }
+  if (first < 0) return 32;
+  /* every remaining bit must be zero, or the mask is not contiguous */
+  if ((n >>> 0) !== v4Mask(first)) return null;
+  return first;
+}
+
+function v4Binary(n) {
+  var s = (n >>> 0).toString(2);
+  while (s.length < 32) s = '0' + s;
+  return s.slice(0, 8) + '.' + s.slice(8, 16) + '.' + s.slice(16, 24) + '.' + s.slice(24);
+}
+
+/* Accepts 10.0.0.0/22, 10.0.0.0/255.255.252.0 and "10.0.0.0 255.255.252.0". */
+function parseCidr4(input) {
+  var text = String(input).trim().replace(/\s+/g, '/');
+  var slash = text.indexOf('/');
+  var addrPart = slash < 0 ? text : text.slice(0, slash);
+  var maskPart = slash < 0 ? '' : text.slice(slash + 1);
+  var octets = parseIPv4(addrPart), prefix, maskOctets;
+  if (!octets) return { ok: false, error: 'Not a valid IPv4 address: ' + JSON.stringify(addrPart) + '.' };
+  if (maskPart === '') prefix = 32;
+  else if (/^[0-9]{1,2}$/.test(maskPart)) {
+    prefix = parseInt(maskPart, 10);
+    if (prefix > 32) return { ok: false, error: 'An IPv4 prefix must be between /0 and /32.' };
+  } else {
+    maskOctets = parseIPv4(maskPart);
+    if (!maskOctets) return { ok: false, error: 'Not a valid mask: ' + JSON.stringify(maskPart) + '.' };
+    prefix = v4PrefixFromMask(v4ToInt(maskOctets));
+    if (prefix === null) return { ok: false, error: 'Mask ' + maskPart + ' is not contiguous, so it has no prefix length.' };
+  }
+  return { ok: true, addr: v4ToInt(octets), prefix: prefix };
+}
+
+function v4InRange(addr, cidr) {
+  var parsed = parseCidr4(cidr);
+  var mask = v4Mask(parsed.prefix);
+  return ((addr & mask) >>> 0) === ((parsed.addr & mask) >>> 0);
+}
+
+function v4Scope(addr) {
+  var i, hit = [];
+  for (i = 0; i < V4_SPECIAL.length; i++) {
+    if (v4InRange(addr, V4_SPECIAL[i][0])) hit.push(V4_SPECIAL[i]);
+  }
+  if (!hit.length) return { name: 'global unicast (public)', ref: '', routable: true };
+  var best = hit[hit.length - 1];
+  return { name: best[1], ref: best[2], routable: false };
+}
+
+function v4Class(addr) {
+  var top = (addr >>> 24) & 0xff;
+  if (top < 128) return 'A';
+  if (top < 192) return 'B';
+  if (top < 224) return 'C';
+  if (top < 240) return 'D (multicast)';
+  return 'E (reserved)';
+}
+
+function v4Arpa(addr) {
+  var o = intToV4(addr).split('.');
+  return o[3] + '.' + o[2] + '.' + o[1] + '.' + o[0] + '.in-addr.arpa';
+}
+
+function cidrInfo4(addr, prefix) {
+  var mask = v4Mask(prefix);
+  var network = (addr & mask) >>> 0;
+  var broadcast = (network | (~mask >>> 0)) >>> 0;
+  var total = Math.pow(2, 32 - prefix);
+  var info = {
+    version: 4,
+    input: intToV4(addr),
+    prefix: prefix,
+    network: intToV4(network),
+    networkInt: network,
+    broadcast: intToV4(broadcast),
+    mask: intToV4(mask),
+    maskBits: v4Binary(mask),
+    wildcard: intToV4(~mask >>> 0),
+    total: total,
+    cidr: intToV4(network) + '/' + prefix,
+    klass: v4Class(network),
+    scope: v4Scope(network),
+    arpa: v4Arpa(addr),
+    hex: '0x' + (addr >>> 0).toString(16).toUpperCase(),
+    integer: addr >>> 0,
+    binary: v4Binary(addr),
+    isNetworkAddress: addr === network && prefix < 31,
+    isBroadcastAddress: addr === broadcast && prefix < 31
+  };
+  if (prefix === 32) {
+    info.firstHost = info.lastHost = intToV4(network);
+    info.usable = 1;
+    info.note = 'A /32 is a single host - a loopback, a route target or a firewall rule.';
+  } else if (prefix === 31) {
+    info.firstHost = intToV4(network);
+    info.lastHost = intToV4(broadcast);
+    info.usable = 2;
+    info.note = 'A /31 has no network or broadcast address: both addresses are usable on a point-to-point link (RFC 3021).';
+  } else {
+    info.firstHost = intToV4((network + 1) >>> 0);
+    info.lastHost = intToV4((broadcast - 1) >>> 0);
+    info.usable = total - 2;
+  }
+  return info;
+}
+
+/* ---------- IPv6 ---------- */
+
+var V6_SPECIAL = [
+  ['::/128', 'unspecified', 'RFC 4291'],
+  ['::1/128', 'loopback', 'RFC 4291'],
+  ['::ffff:0:0/96', 'IPv4-mapped', 'RFC 4291'],
+  ['64:ff9b::/96', 'NAT64 well-known prefix', 'RFC 6052'],
+  ['100::/64', 'discard-only', 'RFC 6666'],
+  ['2001:db8::/32', 'documentation', 'RFC 3849'],
+  ['2001::/32', 'Teredo', 'RFC 4380'],
+  ['2002::/16', '6to4', 'RFC 3056'],
+  ['fc00::/7', 'unique local (ULA)', 'RFC 4193'],
+  ['fe80::/10', 'link-local', 'RFC 4291'],
+  ['ff00::/8', 'multicast', 'RFC 4291']
+];
+
+var V6_MAX = (BigInt(1) << BigInt(128)) - BigInt(1);
+
+/* Returns eight 16-bit groups, or null. Handles "::", an embedded IPv4 tail
+   and a %zone suffix (which is kept aside - a zone is local to one host). */
+function parseIPv6(str) {
+  var text = String(str).trim();
+  var pct = text.indexOf('%');
+  var zone = '';
+  if (pct >= 0) { zone = text.slice(pct + 1); text = text.slice(0, pct); }
+  if (text === '') return null;
+  if (!/^[0-9a-fA-F:.]+$/.test(text)) return null;
+  if (text.indexOf(':::') >= 0) return null;
+
+  var dbl = text.indexOf('::');
+  if (dbl >= 0 && text.indexOf('::', dbl + 1) >= 0) return null; /* only one :: is allowed */
+  if (dbl < 0 && (text.charAt(0) === ':' || text.charAt(text.length - 1) === ':')) return null;
+
+  var head = dbl < 0 ? text : text.slice(0, dbl);
+  var tail = dbl < 0 ? '' : text.slice(dbl + 2);
+  var headParts = head === '' ? [] : head.split(':');
+  var tailParts = tail === '' ? [] : tail.split(':');
+  var groups = [], i, v4;
+
+  /* an embedded IPv4 tail (::ffff:192.0.2.1) becomes the last two groups */
+  var all = headParts.concat(tailParts);
+  var lastPart = all.length ? all[all.length - 1] : '';
+  var v4Tail = null;
+  if (lastPart.indexOf('.') >= 0) {
+    v4 = parseIPv4(lastPart);
+    if (!v4) return null;
+    v4Tail = [(v4[0] << 8) | v4[1], (v4[2] << 8) | v4[3]];
+    if (tailParts.length) tailParts.pop(); else headParts.pop();
+  }
+
+  function toGroups(parts) {
+    var out = [], j, p;
+    for (j = 0; j < parts.length; j++) {
+      p = parts[j];
+      if (!/^[0-9a-fA-F]{1,4}$/.test(p)) return null;
+      out.push(parseInt(p, 16));
+    }
+    return out;
+  }
+
+  var h = toGroups(headParts), t = toGroups(tailParts);
+  if (h === null || t === null) return null;
+  if (v4Tail) t = t.concat(v4Tail);
+
+  if (dbl < 0) {
+    groups = h.concat(t);
+    if (groups.length !== 8) return null;
+  } else {
+    var fill = 8 - (h.length + t.length);
+    if (fill < 1) return null; /* "::" must stand for at least one zero group */
+    groups = h.slice();
+    for (i = 0; i < fill; i++) groups.push(0);
+    groups = groups.concat(t);
+  }
+  groups.zone = zone;
+  return groups;
+}
+
+function v6ToBig(groups) {
+  var n = BigInt(0), i;
+  for (i = 0; i < 8; i++) n = (n << BigInt(16)) | BigInt(groups[i]);
+  return n;
+}
+
+function bigToV6Groups(n) {
+  var out = [], i;
+  for (i = 7; i >= 0; i--) out[i] = Number((n >> BigInt(16 * (7 - i))) & BigInt(0xffff));
+  return out;
+}
+
+function expandV6(groups) {
+  var out = [], i, h;
+  for (i = 0; i < 8; i++) {
+    h = groups[i].toString(16);
+    while (h.length < 4) h = '0' + h;
+    out.push(h);
+  }
+  return out.join(':');
+}
+
+/* RFC 5952 canonical form: lowercase, no leading zeros, the longest run of
+   zero groups (leftmost on a tie, and only when it is 2 or more) compressed. */
+function compressV6(groups) {
+  var best = -1, bestLen = 0, run = -1, runLen = 0, i;
+  for (i = 0; i < 8; i++) {
+    if (groups[i] === 0) {
+      if (run < 0) { run = i; runLen = 1; } else runLen++;
+      if (runLen > bestLen) { best = run; bestLen = runLen; }
+    } else { run = -1; runLen = 0; }
+  }
+  var parts = [];
+  for (i = 0; i < 8; i++) parts.push(groups[i].toString(16));
+  if (bestLen < 2) return parts.join(':');
+  var head = parts.slice(0, best).join(':');
+  var tail = parts.slice(best + bestLen).join(':');
+  return head + '::' + tail;
+}
+
+function parseCidr6(input) {
+  var text = String(input).trim();
+  var slash = text.lastIndexOf('/');
+  var addrPart = slash < 0 ? text : text.slice(0, slash);
+  var prefixPart = slash < 0 ? '128' : text.slice(slash + 1);
+  var groups = parseIPv6(addrPart), prefix;
+  if (!groups) return { ok: false, error: 'Not a valid IPv6 address: ' + JSON.stringify(addrPart) + '.' };
+  if (!/^[0-9]{1,3}$/.test(prefixPart)) return { ok: false, error: 'Not a valid IPv6 prefix length: ' + JSON.stringify(prefixPart) + '.' };
+  prefix = parseInt(prefixPart, 10);
+  if (prefix > 128) return { ok: false, error: 'An IPv6 prefix must be between /0 and /128.' };
+  return { ok: true, addr: v6ToBig(groups), prefix: prefix, zone: groups.zone || '' };
+}
+
+function v6Mask(prefix) {
+  return prefix === 0 ? BigInt(0) : ((V6_MAX >> BigInt(128 - prefix)) << BigInt(128 - prefix));
+}
+
+function v6Scope(addr) {
+  var i, parsed, mask, hit = null;
+  for (i = 0; i < V6_SPECIAL.length; i++) {
+    parsed = parseCidr6(V6_SPECIAL[i][0]);
+    mask = v6Mask(parsed.prefix);
+    if ((addr & mask) === (parsed.addr & mask)) {
+      if (!hit || parsed.prefix > hit.prefix) hit = { prefix: parsed.prefix, name: V6_SPECIAL[i][1], ref: V6_SPECIAL[i][2] };
+    }
+  }
+  if (hit) return { name: hit.name, ref: hit.ref, routable: hit.name === 'global unicast' };
+  if ((addr >> BigInt(125)) === BigInt(1)) return { name: 'global unicast', ref: 'RFC 3513', routable: true };
+  return { name: 'reserved by the IETF', ref: 'RFC 4291', routable: false };
+}
+
+function v6Arpa(addr) {
+  var hex = expandV6(bigToV6Groups(addr)).replace(/:/g, '');
+  var out = [], i;
+  for (i = hex.length - 1; i >= 0; i--) out.push(hex.charAt(i));
+  return out.join('.') + '.ip6.arpa';
+}
+
+function cidrInfo6(addr, prefix, zone) {
+  var mask = v6Mask(prefix);
+  var network = addr & mask;
+  var last = network | (V6_MAX ^ mask);
+  var groups = bigToV6Groups(addr);
+  var netGroups = bigToV6Groups(network);
+  return {
+    version: 6,
+    input: compressV6(groups) + (zone ? '%' + zone : ''),
+    prefix: prefix,
+    expanded: expandV6(groups),
+    compressed: compressV6(groups),
+    network: compressV6(netGroups),
+    networkExpanded: expandV6(netGroups),
+    cidr: compressV6(netGroups) + '/' + prefix,
+    first: compressV6(netGroups),
+    last: compressV6(bigToV6Groups(last)),
+    total: pow2(128 - prefix),
+    scope: v6Scope(network),
+    arpa: v6Arpa(addr),
+    hex: '0x' + addr.toString(16).toUpperCase(),
+    integer: addr.toString(),
+    subnetsIn64: prefix <= 64 ? pow2(64 - prefix) : 'none - this prefix is longer than a /64',
+    zone: zone || ''
+  };
+}
+
+/* ---------- one entry point for both versions ---------- */
+
+function looksV6(input) {
+  return String(input).indexOf(':') >= 0;
+}
+
+function analyseAddress(input) {
+  var text = String(input).trim();
+  if (text === '') return { ok: false, error: 'Enter an address, for example 10.0.0.0/22 or 2001:db8::/48.' };
+  if (looksV6(text)) {
+    var r6 = parseCidr6(text);
+    if (!r6.ok) return r6;
+    return { ok: true, info: cidrInfo6(r6.addr, r6.prefix, r6.zone) };
+  }
+  var r4 = parseCidr4(text);
+  if (!r4.ok) return r4;
+  return { ok: true, info: cidrInfo4(r4.addr, r4.prefix) };
+}
+
+/* ---------- splitting a block into equal subnets ---------- */
+
+var SPLIT_LIMIT = 256;
+
+function splitSubnets(input, newPrefix, limit) {
+  var cap = limit || SPLIT_LIMIT;
+  var text = String(input).trim();
+  var out = [], i, count;
+
+  if (looksV6(text)) {
+    var r6 = parseCidr6(text);
+    if (!r6.ok) return r6;
+    if (newPrefix > 128) return { ok: false, error: 'An IPv6 prefix must be between /0 and /128.' };
+    if (newPrefix < r6.prefix) return { ok: false, error: 'A /' + newPrefix + ' is larger than the /' + r6.prefix + ' you are splitting.' };
+    var base6 = r6.addr & v6Mask(r6.prefix);
+    var step6 = BigInt(1) << BigInt(128 - newPrefix);
+    var count6 = BigInt(1) << BigInt(newPrefix - r6.prefix);
+    for (i = 0; i < cap; i++) {
+      if (BigInt(i) >= count6) break;
+      var net6 = base6 + step6 * BigInt(i);
+      out.push({
+        cidr: compressV6(bigToV6Groups(net6)) + '/' + newPrefix,
+        first: compressV6(bigToV6Groups(net6)),
+        last: compressV6(bigToV6Groups(net6 + step6 - BigInt(1))),
+        hosts: pow2(128 - newPrefix)
+      });
+    }
+    return {
+      ok: true, version: 6,
+      parent: compressV6(bigToV6Groups(base6)) + '/' + r6.prefix,
+      total: count6.toString(), shown: out.length,
+      truncated: BigInt(out.length) < count6, subnets: out
+    };
+  }
+
+  var r4 = parseCidr4(text);
+  if (!r4.ok) return r4;
+  if (newPrefix > 32) return { ok: false, error: 'An IPv4 prefix must be between /0 and /32.' };
+  if (newPrefix < r4.prefix) return { ok: false, error: 'A /' + newPrefix + ' is larger than the /' + r4.prefix + ' you are splitting.' };
+  var base = (r4.addr & v4Mask(r4.prefix)) >>> 0;
+  var step = Math.pow(2, 32 - newPrefix);
+  count = Math.pow(2, newPrefix - r4.prefix);
+  for (i = 0; i < count && i < cap; i++) {
+    var info = cidrInfo4((base + i * step) >>> 0, newPrefix);
+    out.push({ cidr: info.cidr, first: info.firstHost, last: info.lastHost, hosts: groupDigits(info.usable) });
+  }
+  return {
+    ok: true, version: 4,
+    parent: intToV4(base) + '/' + r4.prefix,
+    total: groupDigits(count), shown: out.length,
+    truncated: out.length < count, subnets: out
+  };
+}
+
+/* "How small a prefix holds N hosts" - the question that actually gets asked
+   when someone is carving up a VPC. */
+function prefixForHosts(hosts) {
+  var need = Math.max(1, Math.floor(hosts)) + 2; /* network + broadcast */
+  var p;
+  for (p = 32; p >= 0; p--) {
+    if (Math.pow(2, 32 - p) >= need) return p;
+  }
+  return 0;
+}
+
+
+/* ------------------------------------------------------------------ *
+ * MD5, SHA-1 and SHA-256, written out rather than called from
+ * crypto.subtle: WebCrypto is unavailable on file:// and its API is
+ * asynchronous, and these three are wanted for checksums, not secrets.
+ *
+ * MD5 and SHA-1 are here because artefact checksums and old Git object
+ * ids still use them, not because they are safe to sign anything with.
+ * ------------------------------------------------------------------ */
+
+function rotl32(x, n) {
+  return ((x << n) | (x >>> (32 - n))) >>> 0;
+}
+
+function rotr32(x, n) {
+  return ((x >>> n) | (x << (32 - n))) >>> 0;
+}
+
+function hex32be(n) {
+  var s = (n >>> 0).toString(16);
+  while (s.length < 8) s = '0' + s;
+  return s;
+}
+
+function hex32le(n) {
+  var s = '', i, b;
+  for (i = 0; i < 4; i++) {
+    b = ((n >>> (8 * i)) & 0xff).toString(16);
+    s += b.length === 1 ? '0' + b : b;
+  }
+  return s;
+}
+
+/* Message padding: 0x80, zeros to 56 mod 64, then the bit length as a
+   64-bit integer - little-endian for MD5, big-endian for the SHA family. */
+function padMessage(bytes, littleEndian) {
+  var msg = bytes.slice(), bits = bytes.length * 8, i;
+  var lo = bits >>> 0;
+  var hi = Math.floor(bits / 4294967296);
+  msg.push(0x80);
+  while (msg.length % 64 !== 56) msg.push(0);
+  if (littleEndian) {
+    for (i = 0; i < 4; i++) msg.push((lo >>> (8 * i)) & 0xff);
+    for (i = 0; i < 4; i++) msg.push((hi >>> (8 * i)) & 0xff);
+  } else {
+    for (i = 3; i >= 0; i--) msg.push((hi >>> (8 * i)) & 0xff);
+    for (i = 3; i >= 0; i--) msg.push((lo >>> (8 * i)) & 0xff);
+  }
+  return msg;
+}
+
+var MD5_SHIFT = [
+  7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+  5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+  4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+  6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+];
+
+var MD5_K = (function () {
+  var k = [], i;
+  for (i = 0; i < 64; i++) k.push(Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0);
+  return k;
+})();
+
+function md5(bytes) {
+  var msg = padMessage(bytes, true);
+  var a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+  var off, i, j, m = [], a, b, c, d, f, g, tmp;
+  for (off = 0; off < msg.length; off += 64) {
+    for (j = 0; j < 16; j++) {
+      m[j] = (msg[off + 4 * j]) | (msg[off + 4 * j + 1] << 8) |
+        (msg[off + 4 * j + 2] << 16) | (msg[off + 4 * j + 3] << 24);
+    }
+    a = a0; b = b0; c = c0; d = d0;
+    for (i = 0; i < 64; i++) {
+      if (i < 16) { f = (b & c) | (~b & d); g = i; }
+      else if (i < 32) { f = (d & b) | (~d & c); g = (5 * i + 1) % 16; }
+      else if (i < 48) { f = b ^ c ^ d; g = (3 * i + 5) % 16; }
+      else { f = c ^ (b | ~d); g = (7 * i) % 16; }
+      tmp = d;
+      d = c;
+      c = b;
+      b = (b + rotl32((f + a + MD5_K[i] + m[g]) >>> 0, MD5_SHIFT[i])) | 0;
+      a = tmp;
+    }
+    a0 = (a0 + a) | 0; b0 = (b0 + b) | 0; c0 = (c0 + c) | 0; d0 = (d0 + d) | 0;
+  }
+  return hex32le(a0) + hex32le(b0) + hex32le(c0) + hex32le(d0);
+}
+
+function sha1(bytes) {
+  var msg = padMessage(bytes, false);
+  var h = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
+  var w = [], off, t, a, b, c, d, e, f, k, tmp;
+  for (off = 0; off < msg.length; off += 64) {
+    for (t = 0; t < 16; t++) {
+      w[t] = ((msg[off + 4 * t] << 24) | (msg[off + 4 * t + 1] << 16) |
+        (msg[off + 4 * t + 2] << 8) | msg[off + 4 * t + 3]) >>> 0;
+    }
+    for (t = 16; t < 80; t++) w[t] = rotl32(w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16], 1);
+    a = h[0]; b = h[1]; c = h[2]; d = h[3]; e = h[4];
+    for (t = 0; t < 80; t++) {
+      if (t < 20) { f = (b & c) | (~b & d); k = 0x5a827999; }
+      else if (t < 40) { f = b ^ c ^ d; k = 0x6ed9eba1; }
+      else if (t < 60) { f = (b & c) | (b & d) | (c & d); k = 0x8f1bbcdc; }
+      else { f = b ^ c ^ d; k = 0xca62c1d6; }
+      tmp = (rotl32(a, 5) + (f >>> 0) + e + k + w[t]) >>> 0;
+      e = d; d = c; c = rotl32(b, 30); b = a; a = tmp;
+    }
+    h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0;
+    h[3] = (h[3] + d) >>> 0; h[4] = (h[4] + e) >>> 0;
+  }
+  return h.map(hex32be).join('');
+}
+
+var SHA256_K = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+];
+
+function sha256(bytes) {
+  var msg = padMessage(bytes, false);
+  var h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  var w = [], off, t, a, b, c, d, e, f, g, hh, s0, s1, ch, maj, t1, t2;
+  for (off = 0; off < msg.length; off += 64) {
+    for (t = 0; t < 16; t++) {
+      w[t] = ((msg[off + 4 * t] << 24) | (msg[off + 4 * t + 1] << 16) |
+        (msg[off + 4 * t + 2] << 8) | msg[off + 4 * t + 3]) >>> 0;
+    }
+    for (t = 16; t < 64; t++) {
+      s0 = rotr32(w[t - 15], 7) ^ rotr32(w[t - 15], 18) ^ (w[t - 15] >>> 3);
+      s1 = rotr32(w[t - 2], 17) ^ rotr32(w[t - 2], 19) ^ (w[t - 2] >>> 10);
+      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+    }
+    a = h[0]; b = h[1]; c = h[2]; d = h[3]; e = h[4]; f = h[5]; g = h[6]; hh = h[7];
+    for (t = 0; t < 64; t++) {
+      s1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
+      ch = (e & f) ^ (~e & g);
+      t1 = (hh + s1 + (ch >>> 0) + SHA256_K[t] + w[t]) >>> 0;
+      s0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
+      maj = (a & b) ^ (a & c) ^ (b & c);
+      t2 = (s0 + (maj >>> 0)) >>> 0;
+      hh = g; g = f; f = e;
+      e = (d + t1) >>> 0;
+      d = c; c = b; b = a;
+      a = (t1 + t2) >>> 0;
+    }
+    h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0; h[3] = (h[3] + d) >>> 0;
+    h[4] = (h[4] + e) >>> 0; h[5] = (h[5] + f) >>> 0; h[6] = (h[6] + g) >>> 0; h[7] = (h[7] + hh) >>> 0;
+  }
+  return h.map(hex32be).join('');
+}
+
+function hashAll(bytes) {
+  return { md5: md5(bytes), sha1: sha1(bytes), sha256: sha256(bytes) };
+}
+
+function hashText(text) {
+  return hashAll(utf8Encode(String(text)));
+}
+
+
+/* ------------------------------------------------------------------ *
+ * Base64, URL encoding, JWT.
+ * ------------------------------------------------------------------ */
+
+function encodeBase64(text, urlSafe, padded, wrap) {
+  var out = bytesToB64(utf8Encode(String(text)), urlSafe, padded);
+  if (wrap && wrap > 0) {
+    var lines = [], i;
+    for (i = 0; i < out.length; i += wrap) lines.push(out.slice(i, i + wrap));
+    out = lines.join('\n');
+  }
+  return { ok: true, out: out, bytes: utf8Encode(String(text)).length };
+}
+
+function decodeBase64(text) {
+  if (String(text).trim() === '') return { ok: false, error: 'Nothing to decode.' };
+  var res = b64ToBytes(text);
+  if (!res.ok) return res;
+  var printable = isPrintableUtf8(res.bytes);
+  return {
+    ok: true,
+    out: printable ? utf8Decode(res.bytes) : '',
+    hex: bytesToHex(res.bytes),
+    bytes: res.bytes.length,
+    binary: !printable,
+    warning: res.warning || (printable ? '' : 'The decoded bytes are not printable text, so only the hex dump is shown.')
+  };
+}
+
+/* ---------- URL ---------- */
+
+function urlEncode(text, mode) {
+  try {
+    if (mode === 'component') return { ok: true, out: encodeURIComponent(String(text)) };
+    if (mode === 'full') return { ok: true, out: encodeURI(String(text)) };
+    /* form: what a browser posts - space becomes +, and the RFC 3986 set
+       that encodeURIComponent leaves alone is encoded too */
+    return {
+      ok: true,
+      out: encodeURIComponent(String(text))
+        .replace(/[!'()*]/g, function (c) { return '%' + c.charCodeAt(0).toString(16).toUpperCase(); })
+        .replace(/%20/g, '+')
+    };
+  } catch (e) {
+    return { ok: false, error: 'Could not encode: ' + e.message };
+  }
+}
+
+function urlDecode(text, plusIsSpace) {
+  var src = String(text);
+  if (plusIsSpace) src = src.replace(/\+/g, ' ');
+  try {
+    return { ok: true, out: decodeURIComponent(src) };
+  } catch (e) {
+    return { ok: false, error: 'Not a valid percent-encoded string: a "%" is not followed by two hex digits, or the bytes are not valid UTF-8.' };
+  }
+}
+
+/* A deliberately forgiving splitter: people paste half a URL, and the
+   built-in URL parser refuses anything without a scheme. */
+function parseUrlParts(input) {
+  var text = String(input).trim();
+  if (text === '') return { ok: false, error: 'Nothing to parse.' };
+  var m = /^(?:([a-zA-Z][a-zA-Z0-9+.-]*):)?(?:\/\/)?([^\/?#]*)?([^?#]*)?(?:\?([^#]*))?(?:#(.*))?$/.exec(text);
+  if (!m) return { ok: false, error: 'Could not split that into URL parts.' };
+  var authority = m[2] || '';
+  var userinfo = '', hostport = authority;
+  var at = authority.lastIndexOf('@');
+  if (at >= 0) { userinfo = authority.slice(0, at); hostport = authority.slice(at + 1); }
+  var host = hostport, port = '';
+  var colon = hostport.lastIndexOf(':');
+  if (colon >= 0 && hostport.indexOf(']') < colon) { host = hostport.slice(0, colon); port = hostport.slice(colon + 1); }
+  var query = m[4] || '';
+  var params = [], i, pair, eq, k, v, pairs = query === '' ? [] : query.split('&');
+  for (i = 0; i < pairs.length; i++) {
+    pair = pairs[i];
+    if (pair === '') continue;
+    eq = pair.indexOf('=');
+    k = eq < 0 ? pair : pair.slice(0, eq);
+    v = eq < 0 ? '' : pair.slice(eq + 1);
+    params.push({
+      key: urlDecode(k, true).out || k,
+      value: urlDecode(v, true).out || v,
+      raw: pair
+    });
+  }
+  return {
+    ok: true,
+    scheme: m[1] || '',
+    userinfo: userinfo,
+    host: host,
+    port: port,
+    path: m[3] || '',
+    query: query,
+    fragment: m[5] || '',
+    params: params
+  };
+}
+
+/* ---------- JWT ---------- */
+
+var JWT_CLAIMS = {
+  iss: 'issuer', sub: 'subject', aud: 'audience', exp: 'expires at',
+  nbf: 'not valid before', iat: 'issued at', jti: 'token id',
+  scope: 'scope', scp: 'scope', azp: 'authorised party', typ: 'type'
+};
+
+function jwtSegment(seg, name) {
+  var res = b64ToBytes(seg);
+  if (!res.ok) return { ok: false, error: 'The ' + name + ' is not valid base64url: ' + res.error };
+  var text = utf8Decode(res.bytes), value;
+  try {
+    value = JSON.parse(text);
+  } catch (e) {
+    return { ok: false, error: 'The ' + name + ' decoded, but it is not valid JSON: ' + e.message };
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ok: false, error: 'The ' + name + ' is not a JSON object.' };
+  }
+  return { ok: true, value: value, text: text };
+}
+
+/* Decoding only. A JWT is signed, not encrypted: anything in it is readable
+   by whoever holds it, and nothing here says the signature is genuine. */
+function decodeJwt(token, nowMs) {
+  var t = String(token).trim().replace(/^Bearer\s+/i, '').replace(/\s+/g, '');
+  if (t === '') return { ok: false, error: 'Paste a token.' };
+  var parts = t.split('.');
+  if (parts.length === 5) {
+    return { ok: false, error: 'That is a JWE (five segments): the payload is encrypted, so it cannot be read without the decryption key.' };
+  }
+  if (parts.length !== 3) {
+    return { ok: false, error: 'A JWT has three dot-separated segments; this one has ' + parts.length + '.' };
+  }
+  var head = jwtSegment(parts[0], 'header');
+  if (!head.ok) return head;
+  var body = jwtSegment(parts[1], 'payload');
+  if (!body.ok) return body;
+
+  var now = typeof nowMs === 'number' ? nowMs : Date.now();
+  var notes = [], times = [], k, claim;
+  var alg = head.value.alg;
+
+  if (alg === 'none' || alg === 'None' || alg === 'NONE') {
+    notes.push('alg is "none": this token carries no signature at all. Any service that accepts it is trusting unverified input.');
+  }
+  if (parts[2] === '' && alg !== 'none') {
+    notes.push('The signature segment is empty although alg is ' + JSON.stringify(alg) + '.');
+  }
+
+  ['iat', 'nbf', 'exp'].forEach(function (name) {
+    var v = body.value[name];
+    if (typeof v !== 'number') return;
+    times.push({ claim: name, label: JWT_CLAIMS[name], epoch: v, iso: new Date(v * 1000).toISOString(), relative: relativeTime(v * 1000 - now) });
+  });
+
+  if (typeof body.value.exp === 'number') {
+    if (body.value.exp * 1000 <= now) notes.push('Expired ' + relativeTime(body.value.exp * 1000 - now) + '.');
+    else notes.push('Expires ' + relativeTime(body.value.exp * 1000 - now) + '.');
+  } else {
+    notes.push('No exp claim: this token does not expire on its own.');
+  }
+  if (typeof body.value.nbf === 'number' && body.value.nbf * 1000 > now) {
+    notes.push('Not valid yet: nbf is ' + relativeTime(body.value.nbf * 1000 - now) + '.');
+  }
+
+  var claims = [];
+  for (k in body.value) {
+    if (!Object.prototype.hasOwnProperty.call(body.value, k)) continue;
+    claim = body.value[k];
+    claims.push({
+      key: k,
+      label: JWT_CLAIMS[k] || '',
+      value: typeof claim === 'string' ? claim : JSON.stringify(claim)
+    });
+  }
+
+  return {
+    ok: true,
+    alg: typeof alg === 'string' ? alg : '(missing)',
+    typ: typeof head.value.typ === 'string' ? head.value.typ : '',
+    kid: typeof head.value.kid === 'string' ? head.value.kid : '',
+    header: JSON.stringify(head.value, null, 2),
+    payload: JSON.stringify(body.value, null, 2),
+    signature: parts[2],
+    signatureBytes: parts[2] ? (b64ToBytes(parts[2]).bytes || []).length : 0,
+    claims: claims,
+    times: times,
+    notes: notes,
+    expired: typeof body.value.exp === 'number' && body.value.exp * 1000 <= now
+  };
+}
+
+
+/* ------------------------------------------------------------------ *
+ * Time, UUIDs and passwords.
+ * ------------------------------------------------------------------ */
+
+var TIME_UNITS = [
+  ['year', 31557600000], ['month', 2629800000], ['day', 86400000],
+  ['hour', 3600000], ['minute', 60000], ['second', 1000]
+];
+
+function relativeTime(deltaMs) {
+  var abs = Math.abs(deltaMs), i, size, n;
+  if (abs < 1000) return deltaMs >= 0 ? 'now' : 'just now';
+  for (i = 0; i < TIME_UNITS.length; i++) {
+    size = TIME_UNITS[i][1];
+    if (abs >= size || i === TIME_UNITS.length - 1) {
+      n = Math.round(abs / size);
+      return (deltaMs >= 0 ? 'in ' : '') + n + ' ' + TIME_UNITS[i][0] + (n === 1 ? '' : 's') + (deltaMs >= 0 ? '' : ' ago');
+    }
+  }
+  return 'now';
+}
+
+function formatDuration(seconds) {
+  var s = Math.floor(Math.abs(seconds)), parts = [];
+  var d = Math.floor(s / 86400); s -= d * 86400;
+  var h = Math.floor(s / 3600); s -= h * 3600;
+  var m = Math.floor(s / 60); s -= m * 60;
+  if (d) parts.push(d + 'd');
+  if (h) parts.push(h + 'h');
+  if (m) parts.push(m + 'm');
+  if (s || !parts.length) parts.push(s + 's');
+  return (seconds < 0 ? '-' : '') + parts.join(' ');
+}
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+/* Digits are ambiguous: 1700000000 is seconds, 1700000000000 is
+   milliseconds, and log lines carry both. Decide by magnitude, and say
+   which reading was used rather than quietly picking one. */
+function detectEpochUnit(digits) {
+  var len = digits.replace('-', '').length;
+  if (len <= 11) return { unit: 'seconds', factor: 1 };
+  if (len <= 14) return { unit: 'milliseconds', factor: 1000 };
+  if (len <= 17) return { unit: 'microseconds', factor: 1000000 };
+  return { unit: 'nanoseconds', factor: 1000000000 };
+}
+
+function parseTimeInput(text, forced) {
+  var s = String(text).trim();
+  if (s === '') return { ok: false, error: 'Enter a timestamp or a date.' };
+  if (/^-?[0-9]+(\.[0-9]+)?$/.test(s)) {
+    var unit = forced && forced !== 'auto'
+      ? { unit: forced, factor: { seconds: 1, milliseconds: 1000, microseconds: 1000000, nanoseconds: 1000000000 }[forced] }
+      : detectEpochUnit(s.split('.')[0]);
+    var ms = parseFloat(s) / unit.factor * 1000;
+    if (!isFinite(ms) || Math.abs(ms) > 8.64e15) {
+      return { ok: false, error: 'That is outside the range a date can represent (about +-273 000 years).' };
+    }
+    return { ok: true, ms: ms, unit: unit.unit, source: 'epoch' };
+  }
+  var parsed = Date.parse(s);
+  if (isNaN(parsed)) {
+    return { ok: false, error: 'Not a number and not a date this browser can parse. ISO 8601 (2024-03-01T12:00:00Z) always works.' };
+  }
+  return { ok: true, ms: parsed, unit: '', source: 'date' };
+}
+
+function timeInfo(ms, nowMs) {
+  var d = new Date(ms);
+  var now = typeof nowMs === 'number' ? nowMs : Date.now();
+  var offsetMin = -d.getTimezoneOffset();
+  var sign = offsetMin >= 0 ? '+' : '-';
+  var startOfYear = Date.UTC(d.getUTCFullYear(), 0, 1);
+  return {
+    iso: d.toISOString(),
+    utc: d.toUTCString(),
+    local: d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' +
+      pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()),
+    offset: 'UTC' + sign + pad2(Math.floor(Math.abs(offsetMin) / 60)) + ':' + pad2(Math.abs(offsetMin) % 60),
+    seconds: Math.floor(ms / 1000),
+    millis: Math.floor(ms),
+    micros: Math.floor(ms) * 1000,
+    nanos: Math.floor(ms) * 1000000,
+    relative: relativeTime(ms - now),
+    weekday: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getUTCDay()],
+    dayOfYear: Math.floor((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - startOfYear) / 86400000) + 1,
+    utcDate: d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()),
+    utcTime: pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds())
+  };
+}
+
+/* ---------- randomness ---------- */
+
+/* No Math.random fallback anywhere below. A password or a token built from a
+   predictable generator looks exactly as good as a real one, which is the
+   whole problem - better to say the platform cannot do it. */
+function randomBytes(n) {
+  var g = typeof globalThis !== 'undefined' ? globalThis : null;
+  var c = g && g.crypto;
+  if (!c || typeof c.getRandomValues !== 'function') {
+    throw new Error('This browser has no crypto.getRandomValues, so nothing random can be generated safely here.');
+  }
+  var buf = new Uint8Array(n);
+  c.getRandomValues(buf);
+  var out = [], i;
+  for (i = 0; i < n; i++) out.push(buf[i]);
+  return out;
+}
+
+/* Rejection sampling: taking a random byte modulo the alphabet size would
+   make the first (256 % size) characters slightly more likely. */
+function randomBelow(limit) {
+  if (limit < 1 || limit > 256) throw new Error('randomBelow supports 1..256');
+  var max = Math.floor(256 / limit) * limit, b;
+  for (;;) {
+    b = randomBytes(1)[0];
+    if (b < max) return b % limit;
+  }
+}
+
+/* ---------- UUID ---------- */
+
+var UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+function uuidFromBytes(b) {
+  var h = bytesToHex(b);
+  return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20, 32);
+}
+
+function uuidV4() {
+  var b = randomBytes(16);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  return uuidFromBytes(b);
+}
+
+/* v7 sorts by creation time, which is what makes it a better database key
+   than v4: 48 bits of Unix milliseconds, then 74 random bits. */
+function uuidV7(nowMs) {
+  var ms = Math.floor(typeof nowMs === 'number' ? nowMs : Date.now());
+  var b = randomBytes(16), i;
+  for (i = 0; i < 6; i++) b[5 - i] = Math.floor(ms / Math.pow(256, i)) & 0xff;
+  b[6] = (b[6] & 0x0f) | 0x70;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  return uuidFromBytes(b);
+}
+
+function generateUuids(version, count, nowMs) {
+  var out = [], i;
+  var n = Math.max(1, Math.min(500, Math.floor(count) || 1));
+  for (i = 0; i < n; i++) out.push(version === 7 ? uuidV7(nowMs) : uuidV4());
+  return out;
+}
+
+function inspectUuid(text) {
+  var s = String(text).trim().replace(/^urn:uuid:/i, '').replace(/^[{(]|[})]$/g, '');
+  if (!UUID_RE.test(s)) return { ok: false, error: 'Not a UUID: expected 8-4-4-4-12 hexadecimal digits.' };
+  var hex = s.replace(/-/g, '').toLowerCase();
+  var version = parseInt(hex.charAt(12), 16);
+  var variantNibble = parseInt(hex.charAt(16), 16);
+  var variant = variantNibble >= 8 && variantNibble <= 11 ? 'RFC 4122' :
+    (variantNibble >= 12 && variantNibble <= 13 ? 'Microsoft (reserved)' :
+      (variantNibble >= 14 ? 'reserved for future use' : 'NCS (legacy)'));
+  var out = {
+    ok: true,
+    canonical: s.toLowerCase(),
+    version: version,
+    variant: variant,
+    nil: hex === '00000000000000000000000000000000',
+    max: hex === 'ffffffffffffffffffffffffffffffff',
+    hex: hex
+  };
+  if (version === 7) {
+    var ms = parseInt(hex.slice(0, 12), 16);
+    out.timestamp = new Date(ms).toISOString();
+    out.timestampNote = 'v7 embeds the creation time, so it is not anonymous.';
+  }
+  if (version === 1) {
+    var timeHex = hex.slice(13, 16) + hex.slice(8, 12) + hex.slice(0, 8);
+    var intervals = parseInt(timeHex, 16);
+    out.timestamp = new Date(intervals / 10000 - 12219292800000).toISOString();
+    out.timestampNote = 'v1 embeds the creation time and, historically, the MAC address of the machine that made it.';
+  }
+  return out;
+}
+
+/* ---------- passwords ---------- */
+
+var CHARSETS = {
+  lower: 'abcdefghijklmnopqrstuvwxyz',
+  upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  digits: '0123456789',
+  symbols: '!#$%&()*+,-.:;<=>?@[]^_{|}~'
+};
+var AMBIGUOUS = 'Il1O0o';
+
+function buildAlphabet(opts) {
+  var set = '', k;
+  for (k in CHARSETS) {
+    if (opts[k]) set += CHARSETS[k];
+  }
+  if (opts.noAmbiguous) {
+    set = set.split('').filter(function (c) { return AMBIGUOUS.indexOf(c) < 0; }).join('');
+  }
+  return set;
+}
+
+function entropyBits(alphabetSize, length) {
+  return alphabetSize < 2 ? 0 : Math.round(length * (Math.log(alphabetSize) / Math.log(2)) * 10) / 10;
+}
+
+function strengthLabel(bits) {
+  if (bits < 40) return 'weak - fine for a throwaway, not for anything that matters';
+  if (bits < 60) return 'fair - acceptable behind rate limiting and MFA';
+  if (bits < 80) return 'strong - suitable for an account password';
+  return 'very strong - suitable for a service credential or a root key';
+}
+
+function generatePassword(opts) {
+  var length = Math.max(4, Math.min(256, Math.floor(opts.length) || 20));
+  var alphabet = buildAlphabet(opts);
+  if (alphabet.length < 2) return { ok: false, error: 'Pick at least one character set.' };
+
+  var required = [], k;
+  for (k in CHARSETS) {
+    if (!opts[k]) continue;
+    var pool = opts.noAmbiguous
+      ? CHARSETS[k].split('').filter(function (c) { return AMBIGUOUS.indexOf(c) < 0; }).join('')
+      : CHARSETS[k];
+    if (pool.length) required.push(pool);
+  }
+  if (required.length > length) {
+    return { ok: false, error: 'Length ' + length + ' is too short to contain one character from each of the ' + required.length + ' selected sets.' };
+  }
+
+  /* Generate, then check the policy and start again if it is not met: the
+     result stays uniform over the passwords that satisfy the policy, where
+     patching characters into fixed positions would not. */
+  var attempt, i, j, ok, out = '';
+  for (attempt = 0; attempt < 1000; attempt++) {
+    out = '';
+    for (i = 0; i < length; i++) out += alphabet.charAt(randomBelow(alphabet.length));
+    ok = true;
+    for (j = 0; j < required.length; j++) {
+      if (!new RegExp('[' + required[j].replace(/[\\\]^-]/g, '\\$&') + ']').test(out)) { ok = false; break; }
+    }
+    if (ok) break;
+  }
+  var bits = entropyBits(alphabet.length, length);
+  return {
+    ok: true,
+    password: out,
+    length: length,
+    alphabetSize: alphabet.length,
+    bits: bits,
+    strength: strengthLabel(bits)
+  };
+}
+
+
+/* ------------------------------------------------------------------ *
+ * JSON, YAML and regular expressions.
+ * ------------------------------------------------------------------ */
+
+function lineColOf(text, index) {
+  var upto = text.slice(0, index);
+  var line = upto.split('\n').length;
+  var col = index - (upto.lastIndexOf('\n') + 1) + 1;
+  return { line: line, col: col };
+}
+
+function excerptAt(text, line, col) {
+  var lines = text.split('\n');
+  var src = lines[line - 1] || '';
+  if (src.length > 160) src = src.slice(0, 160) + '...';
+  return src + '\n' + new Array(Math.max(1, col)).join(' ') + '^';
+}
+
+function jsonStats(value) {
+  var keys = 0, arrays = 0, objects = 0, depth = 0, nodes = 0;
+  function walk(v, d) {
+    nodes++;
+    if (d > depth) depth = d;
+    if (Array.isArray(v)) {
+      arrays++;
+      v.forEach(function (item) { walk(item, d + 1); });
+    } else if (v && typeof v === 'object') {
+      objects++;
+      Object.keys(v).forEach(function (k) { keys++; walk(v[k], d + 1); });
+    }
+  }
+  walk(value, 1);
+  return { keys: keys, arrays: arrays, objects: objects, depth: depth, nodes: nodes };
+}
+
+function sortDeep(value) {
+  if (Array.isArray(value)) return value.map(sortDeep);
+  if (value && typeof value === 'object') {
+    var out = {};
+    Object.keys(value).sort().forEach(function (k) { out[k] = sortDeep(value[k]); });
+    return out;
+  }
+  return value;
+}
+
+/* JSON.parse reports the position of a syntax error in whichever way the
+   engine of the day feels like - sometimes "at position 41", sometimes a
+   quoted snippet with no position at all. Scanning the text here gives a
+   line and column that are always there and a message worth reading. */
+function findJsonError(src) {
+  var i = 0, n = src.length, depth = 0;
+
+  function ws() { while (i < n && ' \t\n\r'.indexOf(src.charAt(i)) >= 0) i++; }
+  function fail(message, at) { return { index: typeof at === 'number' ? at : i, message: message }; }
+
+  function string() {
+    var start = i;
+    i++;
+    while (i < n) {
+      var ch = src.charAt(i);
+      if (ch === '"') { i++; return null; }
+      if (ch === '\\') {
+        i++;
+        var esc = src.charAt(i);
+        if ('"\\/bfnrt'.indexOf(esc) >= 0) { i++; continue; }
+        if (esc === 'u') {
+          if (!/^[0-9a-fA-F]{4}$/.test(src.substr(i + 1, 4))) return fail('A \\u escape needs exactly four hexadecimal digits.');
+          i += 5;
+          continue;
+        }
+        return fail('Unknown escape "\\' + esc + '" in a string. JSON allows only \\" \\\\ \\/ \\b \\f \\n \\r \\t and \\uXXXX.');
+      }
+      if (ch === '\n') return fail('A string is never closed - it runs to the end of the line.', start);
+      if (ch < ' ') return fail('A raw control character inside a string must be escaped.');
+      i++;
+    }
+    return fail('A string is never closed.', start);
+  }
+
+  function number() {
+    var start = i;
+    if (src.charAt(i) === '-') i++;
+    if (src.charAt(i) === '0') i++;
+    else if (/[1-9]/.test(src.charAt(i))) { while (/[0-9]/.test(src.charAt(i))) i++; }
+    else return fail('Not a valid number.', start);
+    if (src.charAt(i) === '.') {
+      i++;
+      if (!/[0-9]/.test(src.charAt(i))) return fail('A decimal point must be followed by a digit.');
+      while (/[0-9]/.test(src.charAt(i))) i++;
+    }
+    if (src.charAt(i) === 'e' || src.charAt(i) === 'E') {
+      i++;
+      if (src.charAt(i) === '+' || src.charAt(i) === '-') i++;
+      if (!/[0-9]/.test(src.charAt(i))) return fail('An exponent must be followed by a digit.');
+      while (/[0-9]/.test(src.charAt(i))) i++;
+    }
+    return null;
+  }
+
+  function literal(word) {
+    if (src.substr(i, word.length) === word) { i += word.length; return null; }
+    return fail('Unexpected ' + JSON.stringify(src.substr(i, 10)) + ' where a value was expected.');
+  }
+
+  function value() {
+    ws();
+    if (i >= n) return fail('The document ends where a value was expected.');
+    if (++depth > 500) return fail('Nesting is deeper than this tool will follow.');
+    var err = valueInner();
+    depth--;
+    return err;
+  }
+
+  function valueInner() {
+    var ch = src.charAt(i), err;
+    if (ch === '"') return string();
+    if (ch === '-' || (ch >= '0' && ch <= '9')) return number();
+    if (ch === 't') return literal('true');
+    if (ch === 'f') return literal('false');
+    if (ch === 'n') return literal('null');
+    if (ch === '[') {
+      i++;
+      ws();
+      if (src.charAt(i) === ']') { i++; return null; }
+      for (;;) {
+        ws();
+        if (src.charAt(i) === ']') return fail('A trailing comma is not allowed in JSON.');
+        err = value();
+        if (err) return err;
+        ws();
+        if (src.charAt(i) === ',') { i++; continue; }
+        if (src.charAt(i) === ']') { i++; return null; }
+        if (i >= n) return fail('An array is never closed with "]".');
+        return fail('Expected "," or "]" but found ' + JSON.stringify(src.charAt(i)) + '.');
+      }
+    }
+    if (ch === '{') {
+      i++;
+      ws();
+      if (src.charAt(i) === '}') { i++; return null; }
+      for (;;) {
+        ws();
+        if (src.charAt(i) === '}') return fail('A trailing comma is not allowed in JSON.');
+        if (src.charAt(i) === "'") return fail('JSON keys must be in double quotes, not single quotes.');
+        if (src.charAt(i) !== '"') return fail('Expected a key in double quotes but found ' + JSON.stringify(src.charAt(i) || 'the end of the document') + '.');
+        err = string();
+        if (err) return err;
+        ws();
+        if (src.charAt(i) !== ':') return fail('Expected ":" after the key.');
+        i++;
+        err = value();
+        if (err) return err;
+        ws();
+        if (src.charAt(i) === ',') { i++; continue; }
+        if (src.charAt(i) === '}') { i++; return null; }
+        if (i >= n) return fail('An object is never closed with "}".');
+        return fail('Expected "," or "}" but found ' + JSON.stringify(src.charAt(i)) + '.');
+      }
+    }
+    if (ch === "'") return fail('JSON strings must use double quotes.');
+    return fail('Unexpected ' + JSON.stringify(src.substr(i, 10)) + ' where a value was expected.');
+  }
+
+  var topError = value();
+  if (topError) return topError;
+  ws();
+  if (i < n) return fail('Unexpected text after the end of the JSON document.');
+  return null;
+}
+
+function parseJsonText(text) {
+  var src = String(text);
+  if (src.trim() === '') return { ok: false, error: 'Nothing to parse.' };
+  try {
+    return { ok: true, value: JSON.parse(src) };
+  } catch (e) {
+    var out = { ok: false, error: e.message || String(e) };
+    var found = findJsonError(src);
+    if (found) {
+      var pos = lineColOf(src, Math.min(found.index, src.length - 1));
+      out.line = pos.line;
+      out.col = pos.col;
+      out.excerpt = excerptAt(src, pos.line, pos.col);
+      out.error = found.message + ' (line ' + pos.line + ', column ' + pos.col + ')';
+    }
+    return out;
+  }
+}
+
+function formatJson(text, indent, sortKeys) {
+  var parsed = parseJsonText(text);
+  if (!parsed.ok) return parsed;
+  var value = sortKeys ? sortDeep(parsed.value) : parsed.value;
+  var out = indent === 0 ? JSON.stringify(value) : JSON.stringify(value, null, indent);
+  return {
+    ok: true,
+    out: out,
+    stats: jsonStats(parsed.value),
+    inputBytes: utf8Encode(String(text)).length,
+    outputBytes: utf8Encode(out).length
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * YAML.
+ *
+ * A deliberate subset: block mappings and sequences, flow collections,
+ * quoted and plain scalars, block scalars, multiple documents. Anchors,
+ * aliases, tags and complex keys are reported rather than guessed at,
+ * because a validator that silently mis-reads them is worse than one
+ * that says it cannot read them.
+ * ------------------------------------------------------------------ */
+
+function yamlStripComment(text) {
+  var i, ch, quote = null;
+  for (i = 0; i < text.length; i++) {
+    ch = text.charAt(i);
+    if (quote) {
+      if (ch === '\\' && quote === '"') { i++; continue; }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") { quote = ch; continue; }
+    if (ch === '#' && (i === 0 || /\s/.test(text.charAt(i - 1)))) return text.slice(0, i);
+  }
+  return text;
+}
+
+function yamlIndentOf(raw) {
+  var i = 0;
+  while (i < raw.length && raw.charAt(i) === ' ') i++;
+  return i;
+}
+
+function yamlUnquote(text) {
+  var q = text.charAt(0);
+  var body = text.slice(1, -1);
+  if (q === "'") return { ok: true, value: body.replace(/''/g, "'") };
+  var out = '', i, ch, hex;
+  for (i = 0; i < body.length; i++) {
+    ch = body.charAt(i);
+    if (ch !== '\\') { out += ch; continue; }
+    i++;
+    ch = body.charAt(i);
+    if (ch === 'n') out += '\n';
+    else if (ch === 't') out += '\t';
+    else if (ch === 'r') out += '\r';
+    else if (ch === '0') out += '\0';
+    else if (ch === '\\') out += '\\';
+    else if (ch === '"') out += '"';
+    else if (ch === '/') out += '/';
+    else if (ch === 'x' || ch === 'u') {
+      var len = ch === 'x' ? 2 : 4;
+      hex = body.substr(i + 1, len);
+      if (!new RegExp('^[0-9a-fA-F]{' + len + '}$').test(hex)) return { ok: false, error: 'Bad \\' + ch + ' escape in a double-quoted string.' };
+      out += String.fromCharCode(parseInt(hex, 16));
+      i += len;
+    } else return { ok: false, error: 'Unknown escape "\\' + ch + '" in a double-quoted string.' };
+  }
+  return { ok: true, value: out };
+}
+
+function yamlScalar(text, state, lineNo) {
+  var s = text.trim();
+  if (s === '' || s === '~' || /^(null|Null|NULL)$/.test(s)) return null;
+  if (/^(true|True|TRUE)$/.test(s)) return true;
+  if (/^(false|False|FALSE)$/.test(s)) return false;
+  if (/^(yes|Yes|YES|no|No|NO|on|On|ON|off|Off|OFF)$/.test(s)) {
+    state.warn(lineNo, 'YAML 1.1 parsers (including some Kubernetes and Ansible tooling) read ' + JSON.stringify(s) + ' as a boolean, YAML 1.2 reads it as a string. Quote it to be sure.');
+    return s;
+  }
+  if (/^[-+]?[0-9]+$/.test(s)) {
+    if (/^[-+]?0[0-9]+$/.test(s)) {
+      state.warn(lineNo, JSON.stringify(s) + ' has a leading zero: YAML 1.1 reads that as octal, so a file mode like 0755 changes value. Quote it.');
+      return s;
+    }
+    return parseInt(s, 10);
+  }
+  if (/^0x[0-9a-fA-F]+$/.test(s)) return parseInt(s, 16);
+  if (/^0o[0-7]+$/.test(s)) return parseInt(s.slice(2), 8);
+  if (/^[-+]?(\.[0-9]+|[0-9]+(\.[0-9]*)?)([eE][-+]?[0-9]+)?$/.test(s)) {
+    if (/^[0-9]+\.[0-9]*0$/.test(s)) {
+      state.warn(lineNo, JSON.stringify(s) + ' is a number, so the trailing zero is lost (it becomes ' + parseFloat(s) + '). If it is a version, quote it.');
+    }
+    return parseFloat(s);
+  }
+  if (/^[-+]?\.(inf|Inf|INF)$/.test(s)) return s.charAt(0) === '-' ? -Infinity : Infinity;
+  if (/^\.(nan|NaN|NAN)$/.test(s)) return NaN;
+  return s;
+}
+
+/* A small recursive-descent reader for [a, b] and {k: v} */
+function yamlFlow(text, state, lineNo) {
+  var i = 0;
+
+  function ws() { while (i < text.length && /\s/.test(text.charAt(i))) i++; }
+
+  function readQuoted() {
+    var q = text.charAt(i), start = i;
+    i++;
+    while (i < text.length) {
+      if (q === '"' && text.charAt(i) === '\\') { i += 2; continue; }
+      if (text.charAt(i) === q) {
+        if (q === "'" && text.charAt(i + 1) === "'") { i += 2; continue; }
+        i++;
+        var un = yamlUnquote(text.slice(start, i));
+        if (!un.ok) { state.err(lineNo, un.error); return ''; }
+        return un.value;
+      }
+      i++;
+    }
+    state.err(lineNo, 'A quoted string is never closed.');
+    return text.slice(start + 1);
+  }
+
+  function readPlain(stoppers) {
+    var start = i;
+    while (i < text.length && stoppers.indexOf(text.charAt(i)) < 0) i++;
+    return yamlScalar(text.slice(start, i), state, lineNo);
+  }
+
+  function value() {
+    ws();
+    var ch = text.charAt(i);
+    if (ch === '[') {
+      i++;
+      var arr = [];
+      ws();
+      if (text.charAt(i) === ']') { i++; return arr; }
+      for (;;) {
+        arr.push(value());
+        ws();
+        if (text.charAt(i) === ',') { i++; ws(); if (text.charAt(i) === ']') { i++; return arr; } continue; }
+        if (text.charAt(i) === ']') { i++; return arr; }
+        state.err(lineNo, 'Expected "," or "]" in a flow sequence.');
+        return arr;
+      }
+    }
+    if (ch === '{') {
+      i++;
+      var map = {};
+      ws();
+      if (text.charAt(i) === '}') { i++; return map; }
+      for (;;) {
+        ws();
+        var key = (text.charAt(i) === '"' || text.charAt(i) === "'") ? readQuoted() : readPlain(':,}');
+        ws();
+        if (text.charAt(i) !== ':') { state.err(lineNo, 'Expected ":" after a key in a flow mapping.'); return map; }
+        i++;
+        map[String(key)] = value();
+        ws();
+        if (text.charAt(i) === ',') { i++; ws(); if (text.charAt(i) === '}') { i++; return map; } continue; }
+        if (text.charAt(i) === '}') { i++; return map; }
+        state.err(lineNo, 'Expected "," or "}" in a flow mapping.');
+        return map;
+      }
+    }
+    if (ch === '"' || ch === "'") return readQuoted();
+    return readPlain(',]}');
+  }
+
+  var out = value();
+  ws();
+  if (i < text.length) state.err(lineNo, 'Unexpected text after the end of a flow collection: ' + JSON.stringify(text.slice(i)));
+  return out;
+}
+
+function yamlSplitKey(text) {
+  var i = 0, ch, quote = null, depth = 0;
+  if (text.charAt(0) === '"' || text.charAt(0) === "'") {
+    quote = text.charAt(0);
+    i = 1;
+    while (i < text.length) {
+      if (quote === '"' && text.charAt(i) === '\\') { i += 2; continue; }
+      if (text.charAt(i) === quote) {
+        if (quote === "'" && text.charAt(i + 1) === "'") { i += 2; continue; }
+        i++;
+        break;
+      }
+      i++;
+    }
+    if (text.charAt(i) !== ':') return null;
+    var un = yamlUnquote(text.slice(0, i));
+    return { key: un.ok ? un.value : text.slice(1, i - 1), rest: text.slice(i + 1).trim(), error: un.ok ? '' : un.error };
+  }
+  for (i = 0; i < text.length; i++) {
+    ch = text.charAt(i);
+    if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') depth--;
+    else if (ch === ':' && depth === 0 && (i + 1 >= text.length || text.charAt(i + 1) === ' ')) {
+      return { key: text.slice(0, i).trim(), rest: text.slice(i + 1).trim(), error: '' };
+    }
+  }
+  return null;
+}
+
+function parseYaml(text) {
+  var src = String(text).replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  var lines = src.split('\n');
+  var errors = [], warnings = [], i;
+
+  var state = {
+    err: function (line, message) {
+      if (errors.length < 50) errors.push({ line: line, message: message });
+    },
+    warn: function (line, message) {
+      for (var w = 0; w < warnings.length; w++) {
+        if (warnings[w].line === line && warnings[w].message === message) return;
+      }
+      if (warnings.length < 50) warnings.push({ line: line, message: message });
+    }
+  };
+
+  for (i = 0; i < lines.length; i++) {
+    if (/^[ ]*\t/.test(lines[i])) {
+      state.err(i + 1, 'A tab is used for indentation. YAML forbids tabs there - use spaces.');
+    }
+  }
+
+  var pos = 0;
+
+  function info(n) {
+    var raw = lines[n];
+    if (raw === undefined) return null;
+    var text = yamlStripComment(raw).replace(/\s+$/, '');
+    return { raw: raw, indent: yamlIndentOf(raw), text: text, body: text.trim(), n: n };
+  }
+
+  function skipBlank() {
+    while (pos < lines.length) {
+      var it = info(pos);
+      if (it.body === '') pos++;
+      else return;
+    }
+  }
+
+  function atDocBoundary() {
+    var it = info(pos);
+    return it && (it.body === '---' || it.body === '...' || /^---\s/.test(it.text));
+  }
+
+  function unsupported(body, lineNo) {
+    if (/^[&*]/.test(body)) {
+      state.err(lineNo, 'Anchors and aliases (& and *) are not supported by this validator, so the document was not fully checked.');
+      return true;
+    }
+    if (/^!/.test(body)) {
+      state.err(lineNo, 'Explicit tags (!, !!) are not supported by this validator, so the document was not fully checked.');
+      return true;
+    }
+    if (/^\?\s/.test(body)) {
+      state.err(lineNo, 'Complex mapping keys ("? key") are not supported by this validator.');
+      return true;
+    }
+    return false;
+  }
+
+  function blockScalar(header, parentIndent, lineNo) {
+    var style = header.charAt(0);
+    var rest = header.slice(1);
+    var chomp = /[-+]/.test(rest) ? rest.replace(/[^-+]/g, '') : '';
+    var explicit = /[0-9]/.test(rest) ? parseInt(rest.replace(/[^0-9]/g, ''), 10) : 0;
+    if (!/^[-+0-9]*$/.test(rest)) {
+      state.err(lineNo, 'Unexpected text after a block scalar indicator: ' + JSON.stringify(rest));
+    }
+    var content = [], baseIndent = explicit ? parentIndent + explicit : -1, it;
+    while (pos < lines.length) {
+      it = info(pos);
+      if (it.raw.trim() === '') { content.push(''); pos++; continue; }
+      if (it.indent <= parentIndent) break;
+      if (baseIndent < 0) baseIndent = it.indent;
+      if (it.indent < baseIndent) break;
+      content.push(it.raw.slice(baseIndent));
+      pos++;
+    }
+    while (content.length && content[content.length - 1] === '') content.pop();
+    var out;
+    if (style === '|') out = content.join('\n');
+    else {
+      var folded = [], k;
+      for (k = 0; k < content.length; k++) {
+        if (content[k] === '') folded.push('\n');
+        else if (k > 0 && content[k - 1] !== '' && folded.length) folded[folded.length - 1] += ' ' + content[k];
+        else folded.push(content[k]);
+      }
+      out = folded.join('');
+    }
+    if (chomp === '-') return out;
+    if (chomp === '+') return out + '\n';
+    return content.length ? out + '\n' : out;
+  }
+
+  function parseValue(rest, indent, lineNo) {
+    if (rest === '') {
+      pos++;
+      var nested = parseNode(indent + 1);
+      return nested === undefined ? null : nested;
+    }
+    if (rest.charAt(0) === '|' || rest.charAt(0) === '>') {
+      pos++;
+      return blockScalar(rest, indent, lineNo);
+    }
+    if (unsupported(rest, lineNo)) { pos++; return null; }
+    if (rest.charAt(0) === '[' || rest.charAt(0) === '{') {
+      pos++;
+      return yamlFlow(rest, state, lineNo);
+    }
+    if (rest.charAt(0) === '"' || rest.charAt(0) === "'") {
+      var closed = rest.charAt(rest.length - 1) === rest.charAt(0) && rest.length > 1;
+      if (!closed) state.err(lineNo, 'A quoted string is never closed.');
+      pos++;
+      var un = closed ? yamlUnquote(rest) : { ok: true, value: rest.slice(1) };
+      if (!un.ok) { state.err(lineNo, un.error); return rest; }
+      return un.value;
+    }
+    /* a plain scalar may continue on more-indented lines */
+    var parts = [rest];
+    pos++;
+    while (pos < lines.length) {
+      var it = info(pos);
+      if (it.body === '') break;
+      if (it.indent <= indent) break;
+      if (yamlSplitKey(it.body) || /^-(\s|$)/.test(it.body)) break;
+      parts.push(it.body);
+      pos++;
+    }
+    return parts.length > 1 ? parts.join(' ') : yamlScalar(rest, state, lineNo);
+  }
+
+  function parseSeq(indent) {
+    var out = [], it, body, rest;
+    for (;;) {
+      skipBlank();
+      if (pos >= lines.length || atDocBoundary()) break;
+      it = info(pos);
+      if (it.indent < indent) break;
+      if (it.indent > indent) {
+        state.err(it.n + 1, 'This line is indented more than the sequence it belongs to.');
+        pos++;
+        continue;
+      }
+      body = it.body;
+      if (!/^-(\s|$)/.test(body)) break;
+      rest = body.slice(1).trim();
+      if (rest === '') {
+        pos++;
+        var nested = parseNode(indent + 1);
+        out.push(nested === undefined ? null : nested);
+        continue;
+      }
+      /* "- name: web" starts a mapping whose indent is the column of "name" */
+      if (yamlSplitKey(rest)) {
+        var itemIndent = it.text.length - it.text.replace(/^\s*-\s+/, '').length;
+        lines[pos] = new Array(itemIndent + 1).join(' ') + rest;
+        out.push(parseMap(itemIndent));
+        continue;
+      }
+      out.push(parseValue(rest, indent, it.n + 1));
+    }
+    return out;
+  }
+
+  function parseMap(indent) {
+    var out = {}, seen = {}, it, split;
+    for (;;) {
+      skipBlank();
+      if (pos >= lines.length || atDocBoundary()) break;
+      it = info(pos);
+      if (it.indent < indent) break;
+      if (it.indent > indent) {
+        state.err(it.n + 1, 'This line is indented more than the mapping it belongs to (expected ' + indent + ' spaces, found ' + it.indent + ').');
+        pos++;
+        continue;
+      }
+      if (/^-(\s|$)/.test(it.body)) break;
+      if (unsupported(it.body, it.n + 1)) { pos++; continue; }
+      split = yamlSplitKey(it.body);
+      if (!split) {
+        state.err(it.n + 1, 'Expected "key: value" but found ' + JSON.stringify(it.body.slice(0, 60)) + '. A colon inside a plain value needs a space after it, or quotes around the value.');
+        pos++;
+        continue;
+      }
+      if (split.error) state.err(it.n + 1, split.error);
+      if (Object.prototype.hasOwnProperty.call(seen, split.key)) {
+        state.err(it.n + 1, 'Duplicate key ' + JSON.stringify(split.key) + ' - it was already set on line ' + seen[split.key] + '. Most parsers keep the last one silently.');
+      }
+      seen[split.key] = it.n + 1;
+      out[split.key] = parseValue(split.rest, indent, it.n + 1);
+    }
+    return out;
+  }
+
+  function parseNode(minIndent) {
+    skipBlank();
+    if (pos >= lines.length || atDocBoundary()) return undefined;
+    var it = info(pos);
+    if (it.indent < minIndent) return undefined;
+    if (/^-(\s|$)/.test(it.body)) return parseSeq(it.indent);
+    if (yamlSplitKey(it.body)) return parseMap(it.indent);
+    return parseValue(it.body, it.indent - 1, it.n + 1);
+  }
+
+  var docs = [];
+  skipBlank();
+  while (pos < lines.length) {
+    var here = info(pos);
+    if (here.body === '...') { pos++; skipBlank(); continue; }
+    if (here.body === '---' || /^---\s/.test(here.text)) {
+      var inlineAfterMarker = here.text.replace(/^---\s*/, '').trim();
+      if (inlineAfterMarker !== '') {
+        lines[pos] = new Array(4).join(' ') + inlineAfterMarker;
+        docs.push(parseNode(0));
+      } else {
+        pos++;
+        var doc = parseNode(0);
+        docs.push(doc === undefined ? null : doc);
+      }
+      skipBlank();
+      continue;
+    }
+    var node = parseNode(0);
+    if (node === undefined) break;
+    docs.push(node);
+    skipBlank();
+  }
+
+  if (!docs.length && src.trim() !== '') docs.push(null);
+
+  return {
+    ok: errors.length === 0,
+    value: docs.length === 1 ? docs[0] : docs,
+    documents: docs.length,
+    errors: errors,
+    warnings: warnings,
+    empty: src.trim() === ''
+  };
+}
+
+function validateYaml(text) {
+  if (String(text).trim() === '') return { ok: false, errors: [{ line: 1, message: 'Nothing to validate.' }], warnings: [] };
+  var res = parseYaml(text);
+  var out = {
+    ok: res.ok,
+    errors: res.errors,
+    warnings: res.warnings,
+    documents: res.documents,
+    json: ''
+  };
+  try {
+    out.json = JSON.stringify(res.value, function (k, v) {
+      if (typeof v === 'number' && !isFinite(v)) return String(v);
+      return v;
+    }, 2);
+  } catch (e) {
+    out.json = '';
+    out.errors = out.errors.concat([{ line: 1, message: 'The document parsed, but could not be shown as JSON: ' + e.message }]);
+    out.ok = false;
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Regular expressions.
+ * ------------------------------------------------------------------ */
+
+var REGEX_SUBJECT_LIMIT = 200000;
+var REGEX_MATCH_LIMIT = 500;
+
+function runRegex(pattern, flags, subject) {
+  if (String(pattern) === '') return { ok: false, error: 'Enter a pattern.' };
+  var cleanFlags = String(flags || '').replace(/[^gimsuyd]/g, '');
+  var subjectText = String(subject);
+  var truncatedSubject = false;
+  if (subjectText.length > REGEX_SUBJECT_LIMIT) {
+    subjectText = subjectText.slice(0, REGEX_SUBJECT_LIMIT);
+    truncatedSubject = true;
+  }
+  var re;
+  try {
+    re = new RegExp(String(pattern), cleanFlags.indexOf('g') < 0 ? cleanFlags + 'g' : cleanFlags);
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+
+  var matches = [], m, guard = 0, truncated = false;
+  while ((m = re.exec(subjectText)) !== null) {
+    if (matches.length >= REGEX_MATCH_LIMIT) { truncated = true; break; }
+    var groups = [], gi;
+    for (gi = 1; gi < m.length; gi++) groups.push({ n: gi, value: m[gi] === undefined ? null : m[gi] });
+    var named = [], key;
+    if (m.groups) {
+      for (key in m.groups) {
+        if (Object.prototype.hasOwnProperty.call(m.groups, key)) {
+          named.push({ name: key, value: m.groups[key] === undefined ? null : m.groups[key] });
+        }
+      }
+    }
+    matches.push({ index: m.index, text: m[0], groups: groups, named: named });
+    if (m[0] === '') re.lastIndex++;              /* a zero-length match would loop forever */
+    if (++guard > REGEX_MATCH_LIMIT * 20) { truncated = true; break; }
+  }
+
+  return {
+    ok: true,
+    matches: matches,
+    count: matches.length,
+    truncated: truncated,
+    truncatedSubject: truncatedSubject,
+    flags: cleanFlags,
+    source: re.source
+  };
+}
+
+/* Splits the subject into alternating plain and matched runs, so the result
+   can be rendered with createElement and textContent instead of innerHTML. */
+function regexSegments(subject, matches) {
+  var out = [], at = 0, i, m;
+  for (i = 0; i < matches.length; i++) {
+    m = matches[i];
+    if (m.index > at) out.push({ text: subject.slice(at, m.index), hit: false });
+    if (m.text !== '') out.push({ text: m.text, hit: true });
+    at = m.index + m.text.length;
+  }
+  if (at < subject.length) out.push({ text: subject.slice(at), hit: false });
+  return out;
+}
+
+function regexReplace(pattern, flags, subject, replacement) {
+  var res = runRegex(pattern, flags, subject);
+  if (!res.ok) return res;
+  try {
+    var re = new RegExp(String(pattern), String(flags || '').replace(/[^gimsuyd]/g, ''));
+    return { ok: true, out: String(subject).replace(re, String(replacement)) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+
+/* ------------------------------------------------------------------ *
+ * Small DOM helpers.
+ *
+ * Every value that came from the user is placed with textContent. The
+ * page never assigns innerHTML, which is what makes "no HTML injection"
+ * something the security test can check with one regex rather than a
+ * judgement call.
+ * ------------------------------------------------------------------ */
+
+function el(tag, cls, text) {
+  var node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
+
+function add(parent, child) {
+  parent.appendChild(child);
+  return child;
+}
+
+function clear(node) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+function on(node, event, handler) {
+  if (node && node.addEventListener) node.addEventListener(event, handler);
+  return node;
+}
+
+function card(root, title) {
+  var box = add(root, el('div', 'card'));
+  if (title) add(box, el('h3', 'card-t', title));
+  return box;
+}
+
+function field(root, label, opts) {
+  opts = opts || {};
+  var wrap = add(root, el('label', 'field'));
+  add(wrap, el('span', 'lbl', label));
+  var input = el(opts.tag || 'input', 'in' + (opts.plain ? '' : ' mono'));
+  if (opts.tag !== 'textarea') input.type = opts.type || 'text';
+  if (opts.rows) input.rows = opts.rows;
+  if (opts.placeholder) input.placeholder = opts.placeholder;
+  if (opts.value !== undefined) input.value = String(opts.value);
+  if (opts.min !== undefined) input.min = String(opts.min);
+  if (opts.max !== undefined) input.max = String(opts.max);
+  if (opts.inputmode) input.inputMode = opts.inputmode;
+  input.spellcheck = false;
+  input.setAttribute('autocapitalize', 'off');
+  input.setAttribute('autocorrect', 'off');
+  input.setAttribute('autocomplete', 'off');
+  add(wrap, input);
+  return input;
+}
+
+function selectField(root, label, options, value) {
+  var wrap = add(root, el('label', 'field'));
+  add(wrap, el('span', 'lbl', label));
+  var sel = add(wrap, el('select', 'in plain'));
+  options.forEach(function (opt) {
+    var o = add(sel, el('option', '', opt.text));
+    o.value = opt.value;
+    if (opt.value === value) o.selected = true;
+  });
+  sel.value = value;
+  return sel;
+}
+
+function optionRow(root) {
+  return add(root, el('div', 'opts'));
+}
+
+function toggle(row, label, checked, onChange, iconSrc) {
+  var wrap = add(row, el('label', 'chk' + (checked ? ' on' : '')));
+  var box = add(wrap, el('input'));
+  box.type = 'checkbox';
+  box.checked = !!checked;
+  if (iconSrc) {
+    var icon = add(wrap, el('img', 'chipicon'));
+    icon.src = iconSrc;
+    icon.alt = '';
+  }
+  add(wrap, el('span', '', label));
+  on(box, 'change', function () {
+    wrap.className = 'chk' + (box.checked ? ' on' : '');
+    if (onChange) onChange();
+  });
+  return box;
+}
+
+function buttonRow(root) {
+  return add(root, el('div', 'btns'));
+}
+
+function button(row, label, handler, kind) {
+  var b = add(row, el('button', 'btn' + (kind ? ' ' + kind : ''), label));
+  b.type = 'button';
+  on(b, 'click', handler);
+  return b;
+}
+
+function outRow(box, label) {
+  var row = add(box, el('div', 'orow'));
+  add(row, el('span', 'k', label));
+  var value = add(row, el('button', 'v mono'));
+  value.type = 'button';
+  value.title = 'Copy';
+  on(value, 'click', function () { copyText(value.textContent); });
+  return {
+    row: row,
+    node: value,
+    set: function (text, tone) {
+      value.textContent = text === undefined || text === null ? '' : String(text);
+      row.className = 'orow' + (tone ? ' ' + tone : '');
+      row.hidden = false;
+      return this;
+    },
+    hide: function () { row.hidden = true; return this; }
+  };
+}
+
+function outArea(root, label) {
+  if (label) add(root, el('span', 'lbl', label));
+  return add(root, el('div', 'out mono'));
+}
+
+function noteLine(root, text) {
+  return add(root, el('p', 'note', text));
+}
+
+function messageBox(root, kind) {
+  var node = add(root, el('div', kind));
+  node.hidden = true;
+  return {
+    node: node,
+    set: function (text) {
+      node.textContent = text ? String(text) : '';
+      node.hidden = !text;
+    }
+  };
+}
+
+function table(root, headers) {
+  var wrap = add(root, el('div', 'scroll'));
+  var t = add(wrap, el('table', 'tbl'));
+  var head = add(add(t, el('thead')), el('tr'));
+  headers.forEach(function (h) { add(head, el('th', '', h)); });
+  var body = add(t, el('tbody'));
+  return {
+    body: body,
+    clear: function () { clear(body); },
+    row: function (cells) {
+      var tr = add(body, el('tr'));
+      cells.forEach(function (c) { add(tr, el('td', '', c)); });
+      return tr;
+    }
+  };
+}
+
+/* ---------- clipboard ---------- */
+
+var toastTimer = null;
+
+function toast(text) {
+  var node = document.getElementById('toast');
+  if (!node) return;
+  node.textContent = text;
+  node.className = 'show';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { node.className = ''; }, 1600);
+}
+
+/* execCommand is deprecated but it is the only copy route that works on
+   file:// and in older iOS Safari, so it stays as the fallback. */
+function fallbackCopy(text) {
+  try {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.className = 'offscreen';
+    area.setAttribute('readonly', '');
+    document.body.appendChild(area);
+    area.select();
+    var ok = typeof document.execCommand === 'function' && document.execCommand('copy');
+    document.body.removeChild(area);
+    return !!ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+function copyText(text) {
+  var value = text === undefined || text === null ? '' : String(text);
+  if (value === '') return;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(
+        function () { toast('Copied'); },
+        function () { toast(fallbackCopy(value) ? 'Copied' : 'Select the text and copy it manually'); }
+      );
+      return;
+    }
+  } catch (e) { /* fall through to the old route */ }
+  toast(fallbackCopy(value) ? 'Copied' : 'Select the text and copy it manually');
+}
+
+function copyButton(row, label, getText) {
+  return button(row, label, function () { copyText(getText()); });
+}
+
+/* Reading the clipboard needs a permission the browser may refuse, and
+   Firefox refuses it outright - so the button always has somewhere to fall
+   back to rather than appearing to do nothing. */
+function pasteHint(input) {
+  if (input && typeof input.focus === 'function') input.focus();
+  toast('Paste with Ctrl+V, or long-press on a phone');
+}
+
+function pasteInto(input, after) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (text) {
+        if (typeof text !== 'string' || text === '') {
+          toast('The clipboard is empty');
+          return;
+        }
+        input.value = text;
+        if (after) after();
+        toast('Pasted');
+      }, function () { pasteHint(input); });
+      return;
+    }
+  } catch (e) { /* no clipboard read here - tell the user how to do it */ }
+  pasteHint(input);
+}
+
+function pasteButton(row, input, after, label) {
+  return button(row, label || 'Paste', function () { pasteInto(input, after); });
+}
+
+/* One-tap sample inputs. Every tool carries a few, because the fastest way to
+   explain what a field wants is to fill it in. */
+function examples(root, values, apply) {
+  var wrap = add(root, el('div', 'exwrap'));
+  add(wrap, el('span', 'lbl', 'Examples'));
+  var row = add(wrap, el('div', 'opts'));
+  values.forEach(function (value) {
+    var label = typeof value === 'string' ? value : value.label;
+    var data = typeof value === 'string' ? value : value.value;
+    button(row, label, function () { apply(data); }, 'ghost');
+  });
+  return row;
+}
+
+/* Collapsed by default: the help is there for the first visit and out of the
+   way on every one after it. <details> does that with no script. */
+function helpBlock(root, items) {
+  var box = add(root, el('details', 'help'));
+  add(box, el('summary', '', 'What this does, and how to read it'));
+  var list = add(box, el('ul'));
+  items.forEach(function (item) { add(list, el('li', '', item)); });
+  return box;
+}
+
+
+/* ------------------------------------------------------------------ *
+ * The tools. Each one registers itself with an id, a name, the words
+ * the search box matches against, and a build(root) that fills its
+ * panel. Panels are built once, on first open, and kept.
+ * ------------------------------------------------------------------ */
+
+var TOOLS = [];
+
+function renderAddressInfo(out, info) {
+  clear(out);
+  var box = card(out, info.version === 4 ? 'IPv4 /' + info.prefix : 'IPv6 /' + info.prefix);
+
+  if (info.version === 4) {
+    outRow(box, 'Network').set(info.cidr, 'accent');
+    outRow(box, 'Netmask').set(info.mask);
+    outRow(box, 'Wildcard').set(info.wildcard);
+    outRow(box, 'Broadcast').set(info.broadcast);
+    outRow(box, 'Host range').set(info.firstHost + ' - ' + info.lastHost);
+    outRow(box, 'Usable hosts').set(groupDigits(info.usable), 'good');
+    outRow(box, 'Total addresses').set(groupDigits(info.total));
+    outRow(box, 'Type').set(info.scope.name + (info.scope.ref ? ' (' + info.scope.ref + ')' : ''), info.scope.routable ? '' : 'warn');
+    outRow(box, 'Class').set(info.klass);
+
+    var detail = card(out, 'The address you typed');
+    outRow(detail, 'Address').set(info.input);
+    outRow(detail, 'Integer').set(groupDigits(info.integer));
+    outRow(detail, 'Hex').set(info.hex);
+    outRow(detail, 'Binary').set(info.binary);
+    outRow(detail, 'Mask bits').set(info.maskBits);
+    outRow(detail, 'Reverse DNS').set(info.arpa);
+    if (info.isNetworkAddress) noteLine(detail, 'That is the network address of the block, so it cannot be assigned to a host.');
+    if (info.isBroadcastAddress) noteLine(detail, 'That is the broadcast address of the block, so it cannot be assigned to a host.');
+    if (info.note) noteLine(detail, info.note);
+    return;
+  }
+
+  outRow(box, 'Network').set(info.cidr, 'accent');
+  outRow(box, 'First address').set(info.first);
+  outRow(box, 'Last address').set(info.last);
+  outRow(box, 'Total addresses').set(groupDigits(info.total), 'good');
+  outRow(box, '/64 subnets inside').set(groupDigits(info.subnetsIn64));
+  outRow(box, 'Type').set(info.scope.name + (info.scope.ref ? ' (' + info.scope.ref + ')' : ''), info.scope.routable ? '' : 'warn');
+
+  var d6 = card(out, 'The address you typed');
+  outRow(d6, 'Compressed').set(info.compressed);
+  outRow(d6, 'Expanded').set(info.expanded);
+  if (info.zone) outRow(d6, 'Zone').set('%' + info.zone);
+  outRow(d6, 'Integer').set(info.integer);
+  outRow(d6, 'Hex').set(info.hex);
+  outRow(d6, 'Reverse DNS').set(info.arpa);
+  noteLine(d6, 'IPv6 has no broadcast address and no reserved network address, so every address in the prefix is usable.');
+}
+
+TOOLS.push({
+  id: 'cidr',
+  name: 'CIDR Calculator',
+  blurb: 'Network, broadcast, mask, host range',
+  keywords: 'cidr ip ipv4 ipv6 netmask wildcard broadcast prefix network mask arpa ptr rfc1918 private',
+  build: function (root) {
+    var input = field(root, 'Address or CIDR', {
+      placeholder: '10.0.0.0/22',
+      value: '10.0.0.0/22',
+      inputmode: 'text'
+    });
+    var tools = buttonRow(root);
+    pasteButton(tools, input, function () { update(); });
+    button(tools, 'Clear', function () { input.value = ''; update(); });
+    examples(root, ['10.0.0.0/22', '192.168.1.130/26', '172.16.5.9/255.255.0.0', '100.64.0.1/10', '2001:db8::/48', 'fe80::1/64'], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'Type an address with or without a prefix. A bare address is treated as a /32 (IPv4) or /128 (IPv6).',
+      'A netmask works in place of the prefix: 10.0.0.0/255.255.252.0, or with a space between them, as router output prints it.',
+      'Usable hosts excludes the network and broadcast addresses - except on a /31, which has neither (RFC 3021), and a /32, which is a single host.',
+      'Type tells you whether the block is routable on the internet: private (RFC 1918), carrier-grade NAT, link-local, documentation and multicast ranges are all called out.',
+      'Tap any value to copy it.'
+    ]);
+    var err = messageBox(root, 'err');
+    var out = add(root, el('div'));
+
+    function update() {
+      var res = analyseAddress(input.value);
+      if (!res.ok) {
+        err.set(res.error);
+        clear(out);
+        return;
+      }
+      err.set('');
+      renderAddressInfo(out, res.info);
+    }
+
+    on(input, 'input', update);
+    update();
+    return { update: update, input: input };
+  }
+});
+
+TOOLS.push({
+  id: 'subnet',
+  name: 'Subnet Splitter',
+  blurb: 'Carve a block into equal subnets',
+  keywords: 'subnet split vlsm ipv4 ipv6 prefix divide slash blocks hosts vpc',
+  build: function (root) {
+    var input = field(root, 'Block to split', { placeholder: '10.0.0.0/22', value: '10.0.0.0/22' });
+    var row = add(root, el('div', 'inline'));
+    var prefix = field(row, 'Into prefix', { type: 'number', value: 24, min: 0, max: 128, inputmode: 'numeric' });
+    var hosts = field(row, 'Or: hosts needed per subnet', { type: 'number', placeholder: '500', inputmode: 'numeric' });
+
+    var tools = buttonRow(root);
+    pasteButton(tools, input, function () { update(); });
+    button(tools, 'Clear', function () { input.value = ''; update(); });
+    examples(root, ['10.0.0.0/16', '10.0.0.0/22', '192.168.0.0/24', '2001:db8::/48'], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'Give it a block and the prefix to cut it into: /22 into /24 gives four subnets.',
+      'Or type how many hosts each subnet needs and the prefix is chosen for you - the smallest one that still fits them plus the network and broadcast addresses.',
+      'At most 256 subnets are listed; the summary always says how many there are in total.',
+      'IPv6 works the same way, with exact counts rather than scientific notation - a /48 cut into /52 gives sixteen blocks of 2^76 addresses each.',
+      'Tap any row to copy it.'
+    ]);
+
+    var err = messageBox(root, 'err');
+    var summary = card(root, 'Summary');
+    var parentRow = outRow(summary, 'Parent block');
+    var sizeRow = outRow(summary, 'Each subnet');
+    var countRow = outRow(summary, 'Subnets');
+    var hostRow = outRow(summary, 'Usable hosts each');
+    var listCard = card(root, 'Subnets');
+    var list = table(listCard, ['Subnet', 'First', 'Last', 'Hosts']);
+    var more = noteLine(listCard, '');
+
+    on(hosts, 'input', function () {
+      var wanted = parseInt(hosts.value, 10);
+      if (!isNaN(wanted) && wanted > 0 && !looksV6(input.value)) {
+        prefix.value = String(prefixForHosts(wanted));
+        update();
+      }
+    });
+
+    function update() {
+      var want = parseInt(prefix.value, 10);
+      if (isNaN(want)) {
+        err.set('Enter the prefix length to split into.');
+        return;
+      }
+      var res = splitSubnets(input.value, want);
+      if (!res.ok) {
+        err.set(res.error);
+        list.clear();
+        more.textContent = '';
+        return;
+      }
+      err.set('');
+      parentRow.set(res.parent);
+      sizeRow.set('/' + want);
+      countRow.set(res.total, 'accent');
+      hostRow.set(res.subnets.length ? res.subnets[0].hosts : '-');
+      list.clear();
+      res.subnets.forEach(function (s) { list.row([s.cidr, s.first, s.last, s.hosts]); });
+      more.textContent = res.truncated
+        ? 'Showing the first ' + res.shown + ' of ' + res.total + ' subnets.'
+        : 'All ' + res.total + ' subnets are listed.';
+    }
+
+    on(input, 'input', update);
+    on(prefix, 'input', update);
+    update();
+    return { update: update, input: input };
+  }
+});
+
+
+TOOLS.push({
+  id: 'base64',
+  name: 'Base64',
+  blurb: 'Encode and decode, URL-safe too',
+  keywords: 'base64 b64 encode decode url-safe padding secret kubernetes data urlsafe',
+  build: function (root) {
+    var mode = selectField(root, 'Direction', [
+      { value: 'encode', text: 'Encode text to base64' },
+      { value: 'decode', text: 'Decode base64 to text' }
+    ], 'encode');
+    var input = field(root, 'Input', { tag: 'textarea', rows: 5, placeholder: 'Text to encode' });
+    var opts = optionRow(root);
+    var urlSafe = toggle(opts, 'URL-safe (-_)', false, update);
+    var padding = toggle(opts, 'Padding (=)', true, update);
+    var wrap = toggle(opts, 'Wrap at 76', false, update);
+
+    var tools = buttonRow(root);
+    pasteButton(tools, input, function () { update(); });
+    button(tools, 'Clear', function () { input.value = ''; update(); });
+    examples(root, [
+      { label: 'Plain text', value: 'hello world' },
+      { label: 'Encoded secret', value: 'cG9zdGdyZXM6Ly91c2VyOnBhc3N3b3JkQGRiOjU0MzIvYXBw' },
+      { label: 'URL-safe token', value: 'eyJhbGciOiJIUzI1NiJ9' },
+      { label: 'Non-ASCII', value: 'привіт, світ' }
+    ], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'Encoding takes UTF-8 bytes, so accented and non-Latin text round-trips correctly.',
+      'Decoding accepts both alphabets (+/ and -_), with or without "=" padding, and ignores line breaks - so a wrapped PEM body or a pasted kubectl secret works as it is.',
+      'URL-safe swaps + and / for - and _, which is what JWTs and query-string values use.',
+      'If the decoded bytes are not printable text, the hex dump is shown instead of mangled characters.',
+      '"Use as input" moves the output back into the box and flips the direction, so you can check a round trip.'
+    ]);
+
+    var err = messageBox(root, 'err');
+    var warn = messageBox(root, 'warnbox');
+    var outCard = card(root, 'Output');
+    var out = outArea(outCard);
+    var info = outRow(outCard, 'Size');
+    var row = buttonRow(outCard);
+    copyButton(row, 'Copy', function () { return out.textContent; });
+    button(row, 'Use as input', function () {
+      input.value = out.textContent;
+      mode.value = mode.value === 'encode' ? 'decode' : 'encode';
+      update();
+    });
+    button(row, 'Clear', function () { input.value = ''; update(); });
+    var hexCard = card(root, 'Decoded bytes (hex)');
+    var hex = outArea(hexCard);
+
+    function update() {
+      var text = input.value || '';
+      hexCard.hidden = true;
+      if (text === '') {
+        out.textContent = '';
+        info.set('0 bytes');
+        err.set('');
+        warn.set('');
+        return;
+      }
+      if (mode.value === 'encode') {
+        var enc = encodeBase64(text, urlSafe.checked, padding.checked, wrap.checked ? 76 : 0);
+        err.set('');
+        warn.set('');
+        out.textContent = enc.out;
+        info.set(plural(enc.bytes, 'byte') + ' in, ' + plural(enc.out.replace(/\n/g, '').length, 'character') + ' out');
+        return;
+      }
+      var dec = decodeBase64(text);
+      if (!dec.ok) {
+        err.set(dec.error);
+        warn.set('');
+        out.textContent = '';
+        info.set('-');
+        return;
+      }
+      err.set('');
+      warn.set(dec.warning || '');
+      out.textContent = dec.out;
+      info.set(plural(dec.bytes, 'byte') + ' decoded');
+      if (dec.binary || dec.bytes <= 64) {
+        hexCard.hidden = false;
+        hex.textContent = dec.hex;
+      }
+    }
+
+    on(mode, 'change', function () {
+      input.placeholder = mode.value === 'encode' ? 'Text to encode' : 'Base64 to decode';
+      update();
+    });
+    on(input, 'input', update);
+    update();
+    return { update: update, input: input, mode: mode };
+  }
+});
+
+TOOLS.push({
+  id: 'url',
+  name: 'URL Encoder',
+  blurb: 'Percent-encoding and query parsing',
+  keywords: 'url uri percent encode decode query string parameters escape encodeuricomponent',
+  build: function (root) {
+    var mode = selectField(root, 'Action', [
+      { value: 'component', text: 'Encode - component (encodeURIComponent)' },
+      { value: 'full', text: 'Encode - whole URL (encodeURI)' },
+      { value: 'form', text: 'Encode - form value (space becomes +)' },
+      { value: 'decode', text: 'Decode' },
+      { value: 'decodeplus', text: 'Decode - form value (+ becomes space)' }
+    ], 'component');
+    var input = field(root, 'Input', { tag: 'textarea', rows: 4, placeholder: 'https://example.com/a b?q=1&r=2' });
+    var tools = buttonRow(root);
+    pasteButton(tools, input, function () { update(); });
+    button(tools, 'Clear', function () { input.value = ''; update(); });
+    examples(root, [
+      { label: 'URL with spaces', value: 'https://example.com/search results?q=disk usage&sort=size' },
+      { label: 'Encoded query', value: 'name%3Dweb%26ns%3Ddefault%26app%3Dnginx%2F1.25' },
+      { label: 'Form value', value: 'first name=Ada Lovelace&role=SRE' },
+      { label: 'Path segment', value: 'namespaces/default/pods/web-7f9c/log' }
+    ], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'Component encoding is for one value inside a URL: it escapes /, ? and & so they cannot break out of the field they are in. This is the one you usually want.',
+      'Whole-URL encoding leaves the structural characters alone, so a complete URL stays usable.',
+      'Form encoding is what a browser posts: spaces become "+", and the characters encodeURIComponent leaves alone are escaped too.',
+      'Decoding fails loudly on a malformed sequence - a "%" not followed by two hex digits, or bytes that are not valid UTF-8 - rather than returning something that looks plausible.',
+      'The URL parts card appears whenever the input looks like a URL, and decodes each query parameter for you.'
+    ]);
+    var err = messageBox(root, 'err');
+    var outCard = card(root, 'Output');
+    var out = outArea(outCard);
+    var row = buttonRow(outCard);
+    copyButton(row, 'Copy', function () { return out.textContent; });
+    button(row, 'Use as input', function () { input.value = out.textContent; update(); });
+    button(row, 'Clear', function () { input.value = ''; update(); });
+
+    var partsCard = card(root, 'URL parts');
+    var partsBox = add(partsCard, el('div'));
+    var paramsTable = table(partsCard, ['Parameter', 'Value']);
+
+    function update() {
+      var text = input.value || '';
+      if (text === '') {
+        out.textContent = '';
+        err.set('');
+        partsCard.hidden = true;
+        return;
+      }
+      var res = mode.value === 'decode' ? urlDecode(text, false)
+        : (mode.value === 'decodeplus' ? urlDecode(text, true) : urlEncode(text, mode.value));
+      if (!res.ok) {
+        err.set(res.error);
+        out.textContent = '';
+      } else {
+        err.set('');
+        out.textContent = res.out;
+      }
+
+      var parts = parseUrlParts(text);
+      clear(partsBox);
+      paramsTable.clear();
+      if (!parts.ok || (!parts.scheme && !parts.host && !parts.query)) {
+        partsCard.hidden = true;
+        return;
+      }
+      partsCard.hidden = false;
+      if (parts.scheme) outRow(partsBox, 'Scheme').set(parts.scheme);
+      if (parts.userinfo) outRow(partsBox, 'User info').set(parts.userinfo, 'warn');
+      if (parts.host) outRow(partsBox, 'Host').set(parts.host);
+      if (parts.port) outRow(partsBox, 'Port').set(parts.port);
+      if (parts.path) outRow(partsBox, 'Path').set(parts.path);
+      if (parts.fragment) outRow(partsBox, 'Fragment').set(parts.fragment);
+      parts.params.forEach(function (p) { paramsTable.row([p.key, p.value]); });
+    }
+
+    on(mode, 'change', update);
+    on(input, 'input', update);
+    update();
+    return { update: update, input: input, mode: mode };
+  }
+});
+
+TOOLS.push({
+  id: 'regex',
+  name: 'Regex Tester',
+  blurb: 'Matches, groups and replacements',
+  keywords: 'regex regexp regular expression match groups capture replace pattern grep',
+  build: function (root) {
+    var pattern = field(root, 'Pattern', { placeholder: '(?<key>[A-Z_]+)=(.*)', value: '(?<key>[A-Z_]+)=(.*)' });
+    var flagRow = optionRow(root);
+    var flags = {};
+    [['g', 'global'], ['i', 'ignore case'], ['m', 'multiline'], ['s', 'dot matches newline'], ['u', 'unicode']].forEach(function (f) {
+      flags[f[0]] = toggle(flagRow, f[0] + ' - ' + f[1], f[0] === 'g', update);
+    });
+    var subject = field(root, 'Test text', {
+      tag: 'textarea',
+      rows: 5,
+      value: 'DB_HOST=db.internal\nDB_PORT=5432\n# comment\nAPI_KEY=xyz'
+    });
+    var replacement = field(root, 'Replacement (optional, $1 or $<name>)', { placeholder: '$<key>' });
+
+    var tools = buttonRow(root);
+    pasteButton(tools, subject, function () { update(); }, 'Paste test text');
+    pasteButton(tools, pattern, function () { update(); }, 'Paste pattern');
+    button(tools, 'Clear text', function () { subject.value = ''; update(); });
+    examples(root, [
+      { label: 'Env var', value: '(?<key>[A-Z_]+)=(.*)' },
+      { label: 'IPv4', value: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b' },
+      { label: 'ISO date', value: '\\d{4}-\\d{2}-\\d{2}T[\\d:]+(?:\\.\\d+)?Z?' },
+      { label: 'Log level', value: '^(?<level>ERROR|WARN|INFO|DEBUG)\\s+(?<rest>.*)$' },
+      { label: 'Image tag', value: '^(?<image>[\\w./-]+):(?<tag>[\\w.-]+)$' },
+      { label: 'Email-ish', value: '[\\w.+-]+@[\\w-]+\\.[\\w.]+' }
+    ], function (value) {
+      pattern.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'This is the JavaScript regular-expression engine - the same one as in Node, and close enough to PCRE for most patterns. Lookbehind and named groups both work.',
+      'Named groups (?<name>...) are shown by name in the match table; otherwise groups are numbered.',
+      'The flag toggles map to the usual letters: g finds every match, i ignores case, m makes ^ and $ match line ends, s lets . match a newline, u turns on full Unicode handling.',
+      'Fill the replacement box to preview a substitution: $1 for a numbered group, $<name> for a named one, $& for the whole match.',
+      'Everything runs in this tab, so a pattern that backtracks badly can freeze it. The text is capped at 200 000 characters and 500 matches.'
+    ]);
+
+    var err = messageBox(root, 'err');
+    var summary = card(root, 'Result');
+    var countRow = outRow(summary, 'Matches');
+    var previewCard = card(root, 'Highlighted');
+    var preview = outArea(previewCard);
+    var replaceCard = card(root, 'After replacement');
+    var replaceOut = outArea(replaceCard);
+    copyButton(buttonRow(replaceCard), 'Copy', function () { return replaceOut.textContent; });
+    var listCard = card(root, 'Matches');
+    var list = table(listCard, ['#', 'At', 'Match', 'Groups']);
+    noteLine(listCard, 'Everything runs in this tab, so a pattern that backtracks badly can freeze the page. The test text is capped at 200 000 characters and 500 matches.');
+
+    function update() {
+      var flagText = '';
+      Object.keys(flags).forEach(function (f) { if (flags[f].checked) flagText += f; });
+      var res = runRegex(pattern.value, flagText, subject.value || '');
+      if (!res.ok) {
+        err.set(res.error);
+        countRow.set('-', 'bad');
+        list.clear();
+        clear(preview);
+        replaceCard.hidden = true;
+        return;
+      }
+      err.set('');
+      countRow.set(res.count + (res.truncated ? ' (stopped at the limit)' : ''), res.count ? 'good' : '');
+
+      clear(preview);
+      regexSegments(subject.value || '', res.matches).forEach(function (seg) {
+        add(preview, el('span', seg.hit ? 'hit' : '', seg.text));
+      });
+
+      list.clear();
+      res.matches.slice(0, 200).forEach(function (m, i) {
+        var groups = m.named.length
+          ? m.named.map(function (g) { return g.name + '=' + (g.value === null ? '(none)' : g.value); }).join('  ')
+          : m.groups.map(function (g) { return g.n + '=' + (g.value === null ? '(none)' : g.value); }).join('  ');
+        list.row([String(i + 1), String(m.index), m.text, groups || '-']);
+      });
+
+      if ((replacement.value || '') === '') {
+        replaceCard.hidden = true;
+      } else {
+        var rep = regexReplace(pattern.value, flagText, subject.value || '', replacement.value);
+        replaceCard.hidden = false;
+        replaceOut.textContent = rep.ok ? rep.out : '';
+      }
+    }
+
+    on(pattern, 'input', update);
+    on(subject, 'input', update);
+    on(replacement, 'input', update);
+    update();
+    return { update: update, pattern: pattern, subject: subject };
+  }
+});
+
+TOOLS.push({
+  id: 'jwt',
+  name: 'JWT Decoder',
+  blurb: 'Header, claims and expiry',
+  keywords: 'jwt jws token bearer claims exp iat header payload oauth oidc decode',
+  build: function (root) {
+    var input = field(root, 'Token', { tag: 'textarea', rows: 5, placeholder: 'eyJhbGciOi...' });
+    var row = buttonRow(root);
+    pasteButton(row, input, function () { update(); });
+    button(row, 'Clear', function () { input.value = ''; update(); });
+    examples(root, [
+      { label: 'Signed HS256', value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c' },
+      { label: 'Expired', value: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtleS0xIn0.eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJzdWIiOiJzdmMtZGVwbG95ZXIiLCJhdWQiOiJhcGkiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTcwMDAwMzYwMCwic2NvcGUiOiJyZWFkOnBvZHMgd3JpdGU6cG9kcyJ9.c2lnbmF0dXJlLXBsYWNlaG9sZGVy' },
+      { label: 'alg: none', value: 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJyb290In0.' },
+      { label: 'With Bearer prefix', value: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c' }
+    ], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'A JWT is three base64url segments: header, payload, signature. The first two are only encoded, not encrypted - anyone holding the token can read them, which is why a JWT is not a place for secrets.',
+      'This decodes; it does not verify. Whether the signature is genuine can only be checked against the issuer key, which is not here.',
+      'A leading "Bearer " and any stray whitespace are stripped, so you can paste straight from an Authorization header.',
+      'exp, iat and nbf are shown as absolute times and as a relative reading, so "is this expired" is answerable at a glance.',
+      'alg: none is flagged in red: it means the token carries no signature, and any service that accepts it is trusting unverified input.',
+      'Five segments means a JWE - encrypted, and nothing can be read from it without the key.'
+    ]);
+
+    noteLine(root, 'The token is decoded in this tab and never sent anywhere. A JWT is signed, not encrypted: this shows what it says, and cannot tell you whether the signature is genuine.');
+
+    var err = messageBox(root, 'err');
+    var notes = messageBox(root, 'warnbox');
+    var summary = card(root, 'Summary');
+    var algRow = outRow(summary, 'Algorithm');
+    var typRow = outRow(summary, 'Type');
+    var kidRow = outRow(summary, 'Key id');
+    var stateRow = outRow(summary, 'Status');
+    var sigRow = outRow(summary, 'Signature');
+
+    var headCard = card(root, 'Header');
+    var headOut = outArea(headCard);
+    var payloadCard = card(root, 'Payload');
+    var payloadOut = outArea(payloadCard);
+    copyButton(buttonRow(payloadCard), 'Copy payload', function () { return payloadOut.textContent; });
+    var timeCard = card(root, 'Times');
+    var times = table(timeCard, ['Claim', 'Value', 'When']);
+    var claimCard = card(root, 'Claims');
+    var claims = table(claimCard, ['Claim', 'Meaning', 'Value']);
+
+    function setHidden(hidden) {
+      summary.hidden = hidden;
+      headCard.hidden = hidden;
+      payloadCard.hidden = hidden;
+      timeCard.hidden = hidden;
+      claimCard.hidden = hidden;
+    }
+
+    function update() {
+      if ((input.value || '').trim() === '') {
+        err.set('');
+        notes.set('');
+        setHidden(true);
+        return;
+      }
+      var res = decodeJwt(input.value);
+      if (!res.ok) {
+        err.set(res.error);
+        notes.set('');
+        setHidden(true);
+        return;
+      }
+      err.set('');
+      setHidden(false);
+      algRow.set(res.alg, res.alg === 'none' ? 'bad' : '');
+      typRow.set(res.typ || '(not set)');
+      kidRow.set(res.kid || '(not set)');
+      stateRow.set(res.expired ? 'expired' : 'not expired', res.expired ? 'bad' : 'good');
+      sigRow.set(res.signature ? plural(res.signatureBytes, 'byte') + ', not verified here' : 'none present', res.signature ? 'warn' : 'bad');
+      notes.set(res.notes.join('\n'));
+      headOut.textContent = res.header;
+      payloadOut.textContent = res.payload;
+      times.clear();
+      res.times.forEach(function (t) { times.row([t.claim + ' (' + t.label + ')', t.iso, t.relative]); });
+      timeCard.hidden = res.times.length === 0;
+      claims.clear();
+      res.claims.forEach(function (c) { claims.row([c.key, c.label || '-', c.value]); });
+    }
+
+    on(input, 'input', update);
+    update();
+    return { update: update, input: input };
+  }
+});
+
+
+TOOLS.push({
+  id: 'time',
+  name: 'Unix Timestamp',
+  blurb: 'Epoch to date, and back',
+  keywords: 'unix timestamp epoch time date iso 8601 utc local milliseconds seconds convert clock',
+  build: function (root) {
+    var nowCard = card(root, 'Right now');
+    var nowSec = outRow(nowCard, 'Epoch seconds');
+    var nowMs = outRow(nowCard, 'Epoch milliseconds');
+    var nowIso = outRow(nowCard, 'ISO 8601 UTC');
+
+    var input = field(root, 'Timestamp or date', { placeholder: '1700000000 or 2024-03-01T12:00:00Z', value: '1700000000' });
+    var unit = selectField(root, 'Read a plain number as', [
+      { value: 'auto', text: 'Detect from its length' },
+      { value: 'seconds', text: 'Seconds' },
+      { value: 'milliseconds', text: 'Milliseconds' },
+      { value: 'microseconds', text: 'Microseconds' },
+      { value: 'nanoseconds', text: 'Nanoseconds' }
+    ], 'auto');
+    var row = buttonRow(root);
+    button(row, 'Now', function () { input.value = String(Math.floor(Date.now() / 1000)); update(); }, 'primary');
+    button(row, 'Start of today (UTC)', function () {
+      var d = new Date();
+      input.value = String(Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000));
+      update();
+    });
+    pasteButton(row, input, function () { update(); });
+
+    examples(root, [
+      { label: 'Seconds', value: '1700000000' },
+      { label: 'Milliseconds', value: '1700000000000' },
+      { label: 'Nanoseconds', value: '1700000000000000000' },
+      { label: 'ISO 8601', value: '2024-03-01T12:00:00Z' },
+      { label: 'Log date', value: '2024-03-01 12:00:00 GMT' },
+      { label: 'Kubernetes', value: '2024-03-01T12:00:00.123456789Z' }
+    ], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'A plain number is read as an epoch value, and the unit is guessed from how many digits it has: ten means seconds, thirteen means milliseconds, and so on up to nanoseconds. The result says which reading was used.',
+      'If the guess is wrong - a very old or very distant timestamp - force the unit with the selector.',
+      'Anything that is not a plain number is handed to the browser date parser. ISO 8601 always works; other formats depend on the browser.',
+      'Local time uses this device time zone, and the offset row says which one that is. Everything else is UTC.',
+      'The clock at the top keeps running while this tool is open, so you can grab "now" in either unit.'
+    ]);
+
+    var err = messageBox(root, 'err');
+    var outCard = card(root, 'That moment');
+    var readAs = outRow(outCard, 'Read as');
+    var iso = outRow(outCard, 'ISO 8601 UTC');
+    var utc = outRow(outCard, 'UTC');
+    var local = outRow(outCard, 'Local time');
+    var offset = outRow(outCard, 'Your offset');
+    var relative = outRow(outCard, 'Relative');
+    var secs = outRow(outCard, 'Epoch seconds');
+    var millis = outRow(outCard, 'Epoch milliseconds');
+    var extra = outRow(outCard, 'Day');
+
+    function update() {
+      var parsed = parseTimeInput(input.value, unit.value);
+      if (!parsed.ok) {
+        err.set(parsed.error);
+        outCard.hidden = true;
+        return;
+      }
+      err.set('');
+      outCard.hidden = false;
+      var t = timeInfo(parsed.ms);
+      readAs.set(parsed.source === 'epoch' ? 'a number in ' + parsed.unit : 'a date string');
+      iso.set(t.iso, 'accent');
+      utc.set(t.utc);
+      local.set(t.local);
+      offset.set(t.offset);
+      relative.set(t.relative, 'good');
+      secs.set(String(t.seconds));
+      millis.set(String(t.millis));
+      extra.set(t.weekday + ', day ' + t.dayOfYear + ' of ' + t.iso.slice(0, 4));
+    }
+
+    function tick() {
+      var ms = Date.now();
+      nowSec.set(String(Math.floor(ms / 1000)), 'accent');
+      nowMs.set(String(ms));
+      nowIso.set(new Date(ms).toISOString());
+    }
+
+    on(input, 'input', update);
+    on(unit, 'change', update);
+    tick();
+    update();
+
+    var timer = null;
+    return {
+      update: update,
+      input: input,
+      show: function () {
+        tick();
+        if (timer === null) timer = setInterval(tick, 1000);
+      },
+      hide: function () {
+        if (timer !== null) { clearInterval(timer); timer = null; }
+      }
+    };
+  }
+});
+
+TOOLS.push({
+  id: 'uuid',
+  name: 'UUID Generator',
+  blurb: 'Random v4 and time-ordered v7',
+  keywords: 'uuid guid v4 v7 identifier random generate inspect nil unique id',
+  build: function (root) {
+    var row0 = add(root, el('div', 'inline'));
+    var version = selectField(row0, 'Version', [
+      { value: '4', text: 'v4 - random' },
+      { value: '7', text: 'v7 - time-ordered' }
+    ], '4');
+    var count = field(row0, 'How many', { type: 'number', value: 5, min: 1, max: 500, inputmode: 'numeric' });
+
+    var err = messageBox(root, 'err');
+    var outCard = card(root, 'Generated');
+    var out = outArea(outCard);
+    var row = buttonRow(outCard);
+    button(row, 'Generate', generate, 'primary');
+    copyButton(row, 'Copy all', function () { return out.textContent; });
+    noteLine(outCard, 'v4 is 122 random bits from crypto.getRandomValues. v7 puts the creation time in the first 48 bits, so ids sort by age - useful as a database key, and a reason not to use it where the time should stay private.');
+
+    helpBlock(root, [
+      'v4 is 122 random bits: use it when an id must reveal nothing at all.',
+      'v7 starts with the creation time in milliseconds, so ids sort in the order they were made. That makes them far kinder to a database index than v4 - and means they leak when the record was created.',
+      'The count is capped at 500 per press.',
+      'The inspector below reads any UUID: version, variant, and for v1 and v7 the time it was created.',
+      'Everything is generated with crypto.getRandomValues in this tab. If a browser cannot provide it, the tool says so rather than falling back to something weaker.'
+    ]);
+
+    var inspectCard = card(root, 'Inspect a UUID');
+    var inspectInput = field(inspectCard, 'Paste one', { placeholder: '018f5e2a-7c3d-7b91-a3e8-9f2c4d5b6a70' });
+    var inspectTools = buttonRow(inspectCard);
+    pasteButton(inspectTools, inspectInput, function () { inspect(); });
+    examples(inspectCard, [
+      { label: 'v4', value: '9f1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d' },
+      { label: 'v7', value: '018f5e2a-7c3d-7b91-a3e8-9f2c4d5b6a70' },
+      { label: 'v1', value: '8c8f4a2e-1a3b-11ef-9c5a-0242ac120002' },
+      { label: 'nil', value: '00000000-0000-0000-0000-000000000000' }
+    ], function (value) {
+      inspectInput.value = value;
+      inspect();
+    });
+    var iErr = messageBox(inspectCard, 'err');
+    var vRow = outRow(inspectCard, 'Version');
+    var varRow = outRow(inspectCard, 'Variant');
+    var tRow = outRow(inspectCard, 'Created');
+    var cRow = outRow(inspectCard, 'Canonical');
+
+    function generate() {
+      try {
+        var n = Math.max(1, Math.min(500, parseInt(count.value, 10) || 1));
+        out.textContent = generateUuids(parseInt(version.value, 10), n).join('\n');
+        err.set('');
+      } catch (e) {
+        err.set(e.message);
+        out.textContent = '';
+      }
+    }
+
+    function inspect() {
+      if ((inspectInput.value || '').trim() === '') {
+        iErr.set('');
+        [vRow, varRow, tRow, cRow].forEach(function (r) { r.hide(); });
+        return;
+      }
+      var res = inspectUuid(inspectInput.value);
+      if (!res.ok) {
+        iErr.set(res.error);
+        [vRow, varRow, tRow, cRow].forEach(function (r) { r.hide(); });
+        return;
+      }
+      iErr.set('');
+      vRow.set(res.nil ? 'nil UUID (all zeros)' : (res.max ? 'max UUID (all ones)' : 'v' + res.version));
+      varRow.set(res.variant);
+      cRow.set(res.canonical);
+      if (res.timestamp) tRow.set(res.timestamp + ' - ' + res.timestampNote, 'warn');
+      else tRow.hide();
+    }
+
+    on(version, 'change', generate);
+    on(count, 'input', generate);
+    on(inspectInput, 'input', inspect);
+    generate();
+    inspect();
+    return { generate: generate, inspect: inspect, out: out, inspectInput: inspectInput };
+  }
+});
+
+TOOLS.push({
+  id: 'password',
+  name: 'Password Generator',
+  blurb: 'Random secrets with an entropy figure',
+  keywords: 'password secret generate random entropy passphrase credentials strong token',
+  build: function (root) {
+    var length = field(root, 'Length', { type: 'number', value: 24, min: 4, max: 256, inputmode: 'numeric' });
+    var opts = optionRow(root);
+    var lower = toggle(opts, 'a-z', true, generate);
+    var upper = toggle(opts, 'A-Z', true, generate);
+    var digits = toggle(opts, '0-9', true, generate);
+    var symbols = toggle(opts, 'symbols', true, generate);
+    var noAmbiguous = toggle(opts, 'no Il1O0o', false, generate);
+
+    var PRESETS = {
+      'Service credential': { length: 32, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false },
+      'Account password': { length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: true },
+      'Read it aloud': { length: 24, lower: true, upper: true, digits: true, symbols: false, noAmbiguous: true },
+      'Hex-ish key': { length: 40, lower: true, upper: false, digits: true, symbols: false, noAmbiguous: false },
+      'Numeric PIN': { length: 8, lower: false, upper: false, digits: true, symbols: false, noAmbiguous: false }
+    };
+    examples(root, Object.keys(PRESETS), function (name) {
+      var preset = PRESETS[name];
+      length.value = String(preset.length);
+      [[lower, 'lower'], [upper, 'upper'], [digits, 'digits'], [symbols, 'symbols'], [noAmbiguous, 'noAmbiguous']].forEach(function (pair) {
+        pair[0].checked = preset[pair[1]];
+        /* the chip styling follows the checkbox, which a programmatic change
+           does not do on its own */
+        if (pair[0].parentNode) pair[0].parentNode.className = 'chk' + (pair[0].checked ? ' on' : '');
+      });
+      generate();
+    });
+    helpBlock(root, [
+      'Entropy is counted the honest way: an attacker who knows exactly which settings were used still needs that many bits of guessing. It is log2(alphabet size) multiplied by the length.',
+      'As a rule of thumb, under 40 bits is a throwaway, 60 is acceptable behind rate limiting and MFA, and 80 or more belongs on anything unattended - a service credential, a signing key, a root account.',
+      'Every selected character set is guaranteed to appear at least once. That is done by generating again until the policy is met, not by patching characters into fixed positions, which would make the result less random than it looks.',
+      '"no Il1O0o" drops the characters people misread when a password has to be typed from a screen or read down a phone line.',
+      'Nothing is stored or transmitted. Close the tab and the password is gone - copy it somewhere safe first.'
+    ]);
+
+    var err = messageBox(root, 'err');
+    var outCard = card(root, 'Password');
+    var main = outRow(outCard, 'Generated');
+    var bits = outRow(outCard, 'Entropy');
+    var strength = outRow(outCard, 'Verdict');
+    var alphabet = outRow(outCard, 'Alphabet');
+    var row = buttonRow(outCard);
+    button(row, 'Generate', generate, 'primary');
+    copyButton(row, 'Copy', function () { return main.node.textContent; });
+
+    var moreCard = card(root, 'A few more');
+    var more = outArea(moreCard);
+    copyButton(buttonRow(moreCard), 'Copy all', function () { return more.textContent; });
+
+    noteLine(root, 'Generated here with crypto.getRandomValues and never sent anywhere. Entropy assumes an attacker knows the exact settings used, which is the honest way to count it.');
+
+    function options() {
+      return {
+        length: parseInt(length.value, 10) || 24,
+        lower: lower.checked,
+        upper: upper.checked,
+        digits: digits.checked,
+        symbols: symbols.checked,
+        noAmbiguous: noAmbiguous.checked
+      };
+    }
+
+    function generate() {
+      var opt = options(), res, i, list = [];
+      try {
+        res = generatePassword(opt);
+      } catch (e) {
+        err.set(e.message);
+        return;
+      }
+      if (!res.ok) {
+        err.set(res.error);
+        outCard.hidden = true;
+        moreCard.hidden = true;
+        return;
+      }
+      err.set('');
+      outCard.hidden = false;
+      moreCard.hidden = false;
+      main.set(res.password, 'accent');
+      bits.set(res.bits + ' bits');
+      strength.set(res.strength, res.bits >= 60 ? 'good' : 'warn');
+      alphabet.set(res.alphabetSize + ' characters to choose from');
+      for (i = 0; i < 5; i++) list.push(generatePassword(opt).password);
+      more.textContent = list.join('\n');
+    }
+
+    on(length, 'input', generate);
+    generate();
+    return { generate: generate, length: length, main: main };
+  }
+});
+
+TOOLS.push({
+  id: 'hash',
+  name: 'Hash Calculator',
+  blurb: 'MD5, SHA-1 and SHA-256',
+  keywords: 'hash md5 sha1 sha256 checksum digest fingerprint sum verify integrity',
+  build: function (root) {
+    var input = field(root, 'Text', { tag: 'textarea', rows: 5, placeholder: 'Anything you want the checksums of' });
+    var opts = optionRow(root);
+    var upper = toggle(opts, 'UPPERCASE', false, update);
+
+    var tools = buttonRow(root);
+    pasteButton(tools, input, function () { update(); });
+    button(tools, 'Clear', function () { input.value = ''; update(); });
+    examples(root, [
+      { label: 'Short text', value: 'The quick brown fox jumps over the lazy dog' },
+      { label: 'Empty string', value: '' },
+      { label: 'Config line', value: 'server.port=8443' },
+      { label: 'Non-ASCII', value: 'привіт, світ' }
+    ], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'The three checksums are computed over the UTF-8 bytes of the text, which is what sha256sum and md5sum do to a file containing that text - without the trailing newline a shell here-string would add.',
+      'Paste a checksum into the compare box and it tells you which of the three it matches, if any. Useful for checking a published artefact digest without trusting your own eyes on 64 hex characters.',
+      'MD5 and SHA-1 are kept because artefact checksums, old Git object ids and plenty of vendor documentation still use them.',
+      'Neither is safe where an attacker chooses the input: collisions are practical for MD5 and demonstrated for SHA-1. Use SHA-256 for anything security-relevant.',
+      'This is all done in the tab: nothing you paste is sent anywhere.'
+    ]);
+
+    var outCard = card(root, 'Checksums');
+    var md5Row = outRow(outCard, 'MD5');
+    var sha1Row = outRow(outCard, 'SHA-1');
+    var sha256Row = outRow(outCard, 'SHA-256');
+    var sizeRow = outRow(outCard, 'Input size');
+
+    var compareCard = card(root, 'Compare');
+    var expected = field(compareCard, 'Paste a checksum to check against', { placeholder: '9e107d9d372bb6826bd81d3542a419d6' });
+    var verdict = outRow(compareCard, 'Result');
+
+    noteLine(root, 'MD5 and SHA-1 are here for artefact checksums and old Git object ids. Both are broken for anything where an attacker chooses the input - use SHA-256 for signatures and integrity that matters.');
+
+    var current = { md5: '', sha1: '', sha256: '' };
+
+    function update() {
+      var bytes = utf8Encode(input.value || '');
+      current = hashAll(bytes);
+      var show = function (v) { return upper.checked ? v.toUpperCase() : v; };
+      md5Row.set(show(current.md5));
+      sha1Row.set(show(current.sha1));
+      sha256Row.set(show(current.sha256), 'accent');
+      sizeRow.set(plural(bytes.length, 'byte') + ' (' + formatSize(bytes.length) + ')');
+      compare();
+    }
+
+    function compare() {
+      var want = (expected.value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '');
+      if (want === '') {
+        verdict.set('Paste a checksum above to compare.');
+        return;
+      }
+      var name = want === current.md5 ? 'MD5' : (want === current.sha1 ? 'SHA-1' : (want === current.sha256 ? 'SHA-256' : ''));
+      if (name) verdict.set('Matches the ' + name + ' of the text above.', 'good');
+      else verdict.set('No match with any of the three checksums above.', 'bad');
+    }
+
+    on(input, 'input', update);
+    on(expected, 'input', compare);
+    update();
+    return { update: update, input: input, rows: { md5: md5Row, sha1: sha1Row, sha256: sha256Row } };
+  }
+});
+
+
+TOOLS.push({
+  id: 'json',
+  name: 'JSON Formatter',
+  blurb: 'Pretty-print, minify, find the error',
+  keywords: 'json format pretty print minify validate parse sort keys indent lint',
+  build: function (root) {
+    var input = field(root, 'JSON', { tag: 'textarea', rows: 7, placeholder: '{"name":"web","replicas":3}' });
+    var row0 = add(root, el('div', 'inline'));
+    var indent = selectField(row0, 'Indent', [
+      { value: '2', text: '2 spaces' },
+      { value: '4', text: '4 spaces' },
+      { value: 'tab', text: 'Tab' }
+    ], '2');
+    var opts = optionRow(root);
+    var sortKeys = toggle(opts, 'Sort keys', false, function () { render(lastMode); });
+
+    var row = buttonRow(root);
+    button(row, 'Format', function () { render('format'); }, 'primary');
+    button(row, 'Minify', function () { render('minify'); });
+    pasteButton(row, input, function () { render(lastMode); });
+    button(row, 'Clear', function () { input.value = ''; render('format'); });
+
+    examples(root, [
+      { label: 'Service manifest', value: '{"apiVersion":"v1","kind":"Service","metadata":{"name":"web","labels":{"app":"web"}},"spec":{"ports":[{"port":80,"targetPort":8080}],"selector":{"app":"web"}}}' },
+      { label: 'Nested config', value: '{"logging":{"level":"info","sinks":[{"type":"stdout"},{"type":"file","path":"/var/log/app.log","rotate":{"size":"100MB","keep":7}}]},"features":{"beta":false}}' },
+      { label: 'Array of records', value: '[{"host":"db-1","role":"primary","lag":0},{"host":"db-2","role":"replica","lag":1.4},{"host":"db-3","role":"replica","lag":12.9}]' },
+      { label: 'Broken JSON', value: '{\n  "name": "web",\n  "ports": [80, 443,],\n  "tls": true\n}' }
+    ], function (value) {
+      input.value = value;
+      render('format');
+    });
+    helpBlock(root, [
+      'It reformats as you type; the Format and Minify buttons pick which shape you get.',
+      'When the JSON will not parse, the error names a line and a column and prints that line with a caret under the offending character - including the cases the browser message is vague about, such as a trailing comma or single-quoted keys.',
+      'Sort keys reorders every object alphabetically, all the way down. Handy for diffing two configurations that differ only in key order.',
+      'Structure counts the keys, the nesting depth and the objects and arrays, which is a quick way to see whether a payload is what you expected.',
+      '"Use as input" feeds the output back in, so you can minify what you just formatted.'
+    ]);
+
+    var err = messageBox(root, 'err');
+    var outCard = card(root, 'Output');
+    var out = outArea(outCard);
+    var outRowButtons = buttonRow(outCard);
+    copyButton(outRowButtons, 'Copy', function () { return out.textContent; });
+    button(outRowButtons, 'Use as input', function () { input.value = out.textContent; render(lastMode); });
+
+    var statsCard = card(root, 'Structure');
+    var keysRow = outRow(statsCard, 'Keys');
+    var depthRow = outRow(statsCard, 'Deepest nesting');
+    var shapeRow = outRow(statsCard, 'Objects and arrays');
+    var sizeRow = outRow(statsCard, 'Size');
+
+    var lastMode = 'format';
+
+    function render(mode) {
+      lastMode = mode || 'format';
+      if ((input.value || '').trim() === '') {
+        err.set('');
+        out.textContent = '';
+        statsCard.hidden = true;
+        return;
+      }
+      var width = lastMode === 'minify' ? 0 : (indent.value === 'tab' ? '\t' : parseInt(indent.value, 10));
+      var res = formatJson(input.value, width, sortKeys.checked);
+      if (!res.ok) {
+        err.set(res.error + (res.excerpt ? '\n\n' + res.excerpt : ''));
+        out.textContent = '';
+        statsCard.hidden = true;
+        return;
+      }
+      err.set('');
+      statsCard.hidden = false;
+      out.textContent = res.out;
+      keysRow.set(groupDigits(res.stats.keys));
+      depthRow.set(res.stats.depth + ' levels');
+      shapeRow.set(res.stats.objects + ' objects, ' + res.stats.arrays + ' arrays');
+      sizeRow.set(formatSize(res.inputBytes) + ' in, ' + formatSize(res.outputBytes) + ' out');
+    }
+
+    on(input, 'input', function () { render(lastMode); });
+    on(indent, 'change', function () { render(lastMode); });
+    render('format');
+    return { render: render, input: input, out: out };
+  }
+});
+
+TOOLS.push({
+  id: 'yaml',
+  name: 'YAML Validator',
+  blurb: 'Errors by line, and the JSON it means',
+  keywords: 'yaml yml validate lint parse kubernetes manifest compose pipeline indentation duplicate keys json',
+  build: function (root) {
+    var input = field(root, 'YAML', {
+      tag: 'textarea',
+      rows: 9,
+      placeholder: 'apiVersion: apps/v1\nkind: Deployment'
+    });
+    var row = buttonRow(root);
+    pasteButton(row, input, function () { update(); });
+    button(row, 'Clear', function () { input.value = ''; update(); });
+
+    examples(root, [
+      { label: 'Kubernetes', value: 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\nspec:\n  replicas: 3\n  template:\n    spec:\n      containers:\n        - name: nginx\n          image: nginx:1.25\n          ports:\n            - containerPort: 80\n' },
+      { label: 'Compose', value: 'services:\n  web:\n    image: nginx:1.25\n    ports:\n      - "8080:80"\n    environment:\n      - NGINX_HOST=example.com\n    depends_on:\n      - db\n  db:\n    image: postgres:16\n    volumes:\n      - pgdata:/var/lib/postgresql/data\nvolumes:\n  pgdata:\n' },
+      { label: 'CI workflow', value: 'name: CI\non:\n  push:\n    branches: [main]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm test\n' },
+      { label: 'The traps', value: 'enabled: no\nversion: 3.10\nmode: 0755\nname: web\nname: api\n' },
+      { label: 'Broken indent', value: 'metadata:\n  name: web\n   labels:\n    app: web\n' }
+    ], function (value) {
+      input.value = value;
+      update();
+    });
+    helpBlock(root, [
+      'It validates as you type and shows the JSON the document actually means, which is the quickest way to see whether a value is the string you intended or something the parser reinterpreted.',
+      'Errors carry a line number: tab indentation, a duplicate key (with the line the key was first set on), a value that is not "key: value", an unclosed quote, a line indented more than the block it belongs to.',
+      'Warnings are the traps that survive validation and bite in production: "no" and "yes" read as booleans by YAML 1.1 tooling, "3.10" losing its trailing zero because it is a number, "0755" read as octal, and so on. Quoting fixes all of them.',
+      'Multiple documents separated by --- are all parsed, and the count is reported.',
+      'Supported: block mappings and sequences, flow collections, single and double quoted scalars, literal and folded block scalars, comments. Not supported, and reported rather than guessed at: anchors, aliases, explicit tags and complex keys.'
+    ]);
+
+    var status = messageBox(root, 'okbox');
+    var err = messageBox(root, 'err');
+    var warn = messageBox(root, 'warnbox');
+
+    var jsonCard = card(root, 'As JSON');
+    var jsonOut = outArea(jsonCard);
+    copyButton(buttonRow(jsonCard), 'Copy JSON', function () { return jsonOut.textContent; });
+
+    noteLine(root, 'Checked here, offline. This validator covers block mappings and sequences, flow collections, quoted and block scalars, comments and multiple documents. Anchors, aliases and explicit tags are reported as unsupported rather than guessed at.');
+
+    function update() {
+      if ((input.value || '').trim() === '') {
+        status.set('');
+        err.set('');
+        warn.set('');
+        jsonCard.hidden = true;
+        return;
+      }
+      var res = validateYaml(input.value);
+      jsonCard.hidden = !res.json;
+      jsonOut.textContent = res.json || '';
+      if (res.ok) {
+        status.set('Valid YAML' + (res.documents > 1 ? ' - ' + res.documents + ' documents' : '') + '.');
+        err.set('');
+      } else {
+        status.set('');
+        err.set(res.errors.map(function (e) { return 'Line ' + e.line + ': ' + e.message; }).join('\n\n'));
+      }
+      warn.set(res.warnings.length
+        ? res.warnings.map(function (w) { return 'Line ' + w.line + ': ' + w.message; }).join('\n\n')
+        : '');
+    }
+
+    on(input, 'input', update);
+    update();
+    return { update: update, input: input, jsonOut: jsonOut };
+  }
+});
+
+
+/* ------------------------------------------------------------------ *
+ * The shell: the tool list, routing, install, the service worker and
+ * the one stored preference.
+ * ------------------------------------------------------------------ */
+
+var PREF_KEY = 'devops-pocket-toolkit.v1';
+
+var TOOL_BY_ID = {};
+var PANELS = {};
+var currentId = '';
+var swReady = false;
+var deferredPrompt = null;
+
+TOOLS.forEach(function (tool) { TOOL_BY_ID[tool.id] = tool; });
+
+function isKnownTool(id) {
+  return typeof id === 'string' && Object.prototype.hasOwnProperty.call(TOOL_BY_ID, id);
+}
+
+/* The stored value is the one input an attacker with the device, or an old
+   version of this page, controls - so it is checked against the tool list
+   before it is used for anything. */
+function loadPrefs() {
+  try {
+    if (typeof localStorage === 'undefined') return { tool: '' };
+    var raw = localStorage.getItem(PREF_KEY);
+    if (!raw) return { tool: '' };
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { tool: '' };
+    return { tool: isKnownTool(parsed.tool) ? parsed.tool : '' };
+  } catch (e) {
+    return { tool: '' };
+  }
+}
+
+function savePrefs(toolId) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(PREF_KEY, JSON.stringify({ tool: isKnownTool(toolId) ? toolId : '' }));
+  } catch (e) { /* private mode refuses; the app works without it */ }
+}
+
+/* ---------- home ---------- */
+
+function matchesSearch(tool, query) {
+  if (!query) return true;
+  var hay = (tool.name + ' ' + tool.blurb + ' ' + tool.keywords).toLowerCase();
+  return query.toLowerCase().split(/\s+/).every(function (word) {
+    return word === '' || hay.indexOf(word) >= 0;
+  });
+}
+
+/* ---------- picking tools straight off the home screen ---------- */
+
+var selectMode = false;
+/* A long press is followed by a click when the finger lifts. That click is
+   part of the same gesture, so it is ignored - but only briefly, or a stray
+   flag would swallow the next real tap. */
+var suppressClickUntil = 0;
+var LONG_PRESS_MS = 500;
+var CLICK_SUPPRESS_MS = 700;
+
+function searchQuery() {
+  var search = document.getElementById('search');
+  return search ? search.value || '' : '';
+}
+
+function selectedTools() {
+  return TOOLS.filter(function (tool) { return !!installPicks[tool.id]; });
+}
+
+/* Hold a tile to start picking, the way a phone home screen does it. A drag
+   is a scroll, not a press, so any real movement cancels the timer. */
+function longPress(node, handler) {
+  var timer = null;
+  var startX = 0;
+  var startY = 0;
+
+  function point(event) {
+    if (!event) return { x: 0, y: 0 };
+    if (event.touches && event.touches.length) return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    return { x: event.clientX || 0, y: event.clientY || 0 };
+  }
+
+  function stop() {
+    if (timer) { clearTimeout(timer); timer = null; }
+  }
+
+  function start(event) {
+    var at = point(event);
+    startX = at.x;
+    startY = at.y;
+    stop();
+    timer = setTimeout(function () {
+      timer = null;
+      suppressClickUntil = Date.now() + CLICK_SUPPRESS_MS;
+      handler();
+    }, LONG_PRESS_MS);
+  }
+
+  function move(event) {
+    var at = point(event);
+    if (Math.abs(at.x - startX) > 10 || Math.abs(at.y - startY) > 10) stop();
+  }
+
+  var pointerEvents = typeof window !== 'undefined' && typeof window.PointerEvent !== 'undefined';
+  if (pointerEvents) {
+    on(node, 'pointerdown', start);
+    on(node, 'pointermove', move);
+    on(node, 'pointerup', stop);
+    on(node, 'pointercancel', stop);
+    on(node, 'pointerleave', stop);
+  } else {
+    on(node, 'touchstart', start);
+    on(node, 'touchmove', move);
+    on(node, 'touchend', stop);
+    on(node, 'touchcancel', stop);
+    on(node, 'mousedown', start);
+    on(node, 'mousemove', move);
+    on(node, 'mouseup', stop);
+    on(node, 'mouseleave', stop);
+  }
+  /* a desktop right-click, and what iOS raises on a long hold */
+  on(node, 'contextmenu', function (event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    stop();
+    suppressClickUntil = Date.now() + CLICK_SUPPRESS_MS;
+    handler();
+  });
+}
+
+function renderHome(query) {
+  var grid = document.getElementById('grid');
+  var empty = document.getElementById('empty');
+  var hint = document.getElementById('selecthint');
+  var modeBtn = document.getElementById('selectmode');
+  if (!grid) return 0;
+  clear(grid);
+  grid.className = 'grid' + (selectMode ? ' picking' : '');
+  if (hint) {
+    hint.textContent = selectMode
+      ? 'Tap the tools you want on your home screen.'
+      : 'or long-press any tool to put it on your home screen';
+  }
+  if (modeBtn) modeBtn.textContent = selectMode ? 'Done' : 'Select tools';
+
+  var shown = 0;
+  TOOLS.forEach(function (tool) {
+    if (!matchesSearch(tool, query || '')) return;
+    shown++;
+    var picked = !!installPicks[tool.id];
+    var tile = add(grid, el('button', 'tile' + (picked && selectMode ? ' sel' : '')));
+    tile.type = 'button';
+    tile.setAttribute('data-tool', tool.id);
+    if (selectMode) tile.setAttribute('aria-pressed', picked ? 'true' : 'false');
+    add(tile, el('span', 'pickdot'));
+    var icon = add(tile, el('img', 'tileicon'));
+    icon.src = './icons/tools/' + tool.id + '.png';
+    icon.alt = '';
+    add(tile, el('b', '', tool.name));
+    add(tile, el('span', 'tileblurb', tool.blurb));
+    on(tile, 'click', function () {
+      if (Date.now() < suppressClickUntil) { suppressClickUntil = 0; return; }
+      if (selectMode) toggleSelect(tool.id);
+      else go(tool.id);
+    });
+    longPress(tile, function () { enterSelectMode(tool.id); });
+  });
+  if (empty) empty.hidden = shown !== 0;
+  return shown;
+}
+
+function renderSelectBar() {
+  var bar = document.getElementById('selbar');
+  if (!bar) return;
+  clear(bar);
+  if (typeof document.body !== 'undefined' && document.body) {
+    document.body.className = selectMode ? 'picking' : '';
+  }
+  if (!selectMode) {
+    bar.hidden = true;
+    return;
+  }
+  bar.hidden = false;
+  var picked = selectedTools();
+  /* the count rides on the button rather than taking a line of its own -
+     three controls on one row is the whole bar */
+  var addBtn = button(bar, '', function () {
+    var chosen = selectedTools();
+    if (!chosen.length) {
+      toast('Tap at least one tool first');
+      return;
+    }
+    exitSelectMode();
+    renderInstallWalkthrough(chosen);
+  }, 'primary');
+  clear(addBtn);
+  add(addBtn, el('span', '', picked.length ? 'Add ' + picked.length : 'Add'));
+  add(addBtn, el('span', 'wideword', ' to home screen'));
+  button(bar, picked.length === TOOLS.length ? 'Select none' : 'Select all', function () {
+    var all = picked.length !== TOOLS.length;
+    TOOLS.forEach(function (tool) { installPicks[tool.id] = all; });
+    renderHome(searchQuery());
+    renderSelectBar();
+  });
+  button(bar, 'Cancel', exitSelectMode);
+}
+
+function enterSelectMode(id) {
+  selectMode = true;
+  if (isKnownTool(id)) installPicks[id] = true;
+  renderHome(searchQuery());
+  renderSelectBar();
+  return selectMode;
+}
+
+function exitSelectMode() {
+  selectMode = false;
+  installPicks = {};
+  renderHome(searchQuery());
+  renderSelectBar();
+  return selectMode;
+}
+
+function toggleSelect(id) {
+  if (!isKnownTool(id)) return false;
+  installPicks[id] = !installPicks[id];
+  renderHome(searchQuery());
+  renderSelectBar();
+  return !!installPicks[id];
+}
+
+/* ---------- routing ---------- */
+
+function showPanel(id) {
+  var panelHost = document.getElementById('panel');
+  if (!panelHost) return null;
+  if (!PANELS[id]) {
+    var host = add(panelHost, el('div'));
+    host.setAttribute('data-panel', id);
+    PANELS[id] = { host: host, api: TOOL_BY_ID[id].build(host) || {} };
+  }
+  Object.keys(PANELS).forEach(function (key) {
+    var panel = PANELS[key];
+    var active = key === id;
+    panel.host.hidden = !active;
+    if (!active && panel.api && typeof panel.api.hide === 'function') panel.api.hide();
+  });
+  if (PANELS[id].api && typeof PANELS[id].api.show === 'function') PANELS[id].api.show();
+  return PANELS[id];
+}
+
+function openTool(id) {
+  if (!isKnownTool(id)) return goHome();
+  var home = document.getElementById('home');
+  var tool = document.getElementById('tool');
+  var title = document.getElementById('title');
+  var back = document.getElementById('back');
+  currentId = id;
+  if (selectMode) { selectMode = false; installPicks = {}; renderSelectBar(); }
+  showPanel(id);
+  if (home) home.hidden = true;
+  if (tool) tool.hidden = false;
+  if (title) title.textContent = TOOL_BY_ID[id].name;
+  if (back) back.hidden = false;
+  setHomeScreenIdentity(id);
+  savePrefs(id);
+  if (typeof window !== 'undefined' && window.scrollTo) window.scrollTo(0, 0);
+  return id;
+}
+
+function goHome() {
+  var home = document.getElementById('home');
+  var tool = document.getElementById('tool');
+  var title = document.getElementById('title');
+  var back = document.getElementById('back');
+  currentId = '';
+  Object.keys(PANELS).forEach(function (key) {
+    PANELS[key].host.hidden = true;
+    if (PANELS[key].api && typeof PANELS[key].api.hide === 'function') PANELS[key].api.hide();
+  });
+  if (home) home.hidden = false;
+  if (tool) tool.hidden = true;
+  if (title) title.textContent = 'DevOps Pocket Toolkit';
+  if (back) back.hidden = true;
+  setHomeScreenIdentity('');
+  savePrefs('');
+  return '';
+}
+
+function go(id) {
+  if (typeof location !== 'undefined' && typeof location.hash === 'string') {
+    location.hash = id ? '#/' + id : '#/';
+    if (routeFromHash() === undefined) openTool(id);
+    return id;
+  }
+  return openTool(id);
+}
+
+function routeFromHash() {
+  if (typeof location === 'undefined' || typeof location.hash !== 'string') return undefined;
+  var id = location.hash.replace(/^#\/?/, '');
+  if (isKnownTool(id)) return openTool(id);
+  return goHome();
+}
+
+/* ---------- install ---------- */
+
+function isStandalone() {
+  try {
+    return (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) ||
+      (typeof navigator !== 'undefined' && navigator.standalone === true);
+  } catch (e) {
+    return false;
+  }
+}
+
+function isIOS() {
+  var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  return /iPad|iPhone|iPod/.test(ua) ||
+    (typeof navigator !== 'undefined' && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isIOSChrome() {
+  var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  return isIOS() && /CriOS|FxiOS|EdgiOS/.test(ua);
+}
+
+function updateInstallButton() {
+  var btn = document.getElementById('install');
+  var state = document.getElementById('swstate');
+  if (state) {
+    state.textContent = swReady
+      ? 'Offline copy ready - this works with no network.'
+      : 'Loading the offline copy. Once it is ready this page works with no network.';
+  }
+  if (!btn) return;
+  btn.hidden = isStandalone();
+}
+
+function closeSheet() {
+  var sheet = document.getElementById('sheet');
+  if (sheet) sheet.hidden = true;
+}
+
+function shareGlyph(parent) {
+  if (typeof document.createElementNS !== 'function') return;
+  var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 14 17');
+  svg.setAttribute('class', 'share-glyph');
+  svg.setAttribute('aria-hidden', 'true');
+  var box = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  box.setAttribute('d', 'M3 7H1v9h12V7h-2');
+  box.setAttribute('fill', 'none');
+  box.setAttribute('stroke', 'currentColor');
+  box.setAttribute('stroke-width', '1.4');
+  var arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  arrow.setAttribute('d', 'M7 11V1M3.5 4.5 7 1l3.5 3.5');
+  arrow.setAttribute('fill', 'none');
+  arrow.setAttribute('stroke', 'currentColor');
+  arrow.setAttribute('stroke-width', '1.4');
+  svg.appendChild(box);
+  svg.appendChild(arrow);
+  parent.appendChild(svg);
+}
+
+/* Which tools the person wants as their own icon. Kept in memory only: it is
+   a list of choices made in one sitting, not something worth writing to the
+   device, and the README promises exactly one stored value. */
+var installPicks = {};
+var installQueue = [];
+var installStep = 0;
+
+function sheetBody() {
+  var sheet = document.getElementById('sheet');
+  var body = document.getElementById('sheetbody');
+  if (!sheet || !body) return null;
+  clear(body);
+  sheet.hidden = false;
+  return body;
+}
+
+/* iOS reads the apple-touch-icon and the app title out of the live document
+   when "Add to Home Screen" is tapped, so pointing them at the open tool is
+   what gives each added tool its own icon and name. */
+function setHomeScreenIdentity(id) {
+  var link = document.getElementById('touchicon');
+  var meta = document.getElementById('apptitle');
+  var known = isKnownTool(id);
+  if (link) link.setAttribute('href', known ? './icons/tools/' + id + '.png' : './icons/icon-180.png');
+  if (meta) meta.setAttribute('content', known ? TOOL_BY_ID[id].name : 'DevOps Toolkit');
+  if (typeof document !== 'undefined') {
+    document.title = known ? TOOL_BY_ID[id].name + ' - DevOps Pocket Toolkit' : 'DevOps Pocket Toolkit';
+  }
+}
+
+function addSteps(body, label) {
+  var list = add(body, el('ol'));
+  if (isIOSChrome()) {
+    add(list, el('li', '', 'Open this page in Safari - on an iPhone or iPad no other browser can add a web app to the home screen.'));
+    return list;
+  }
+  if (isIOS()) {
+    var step1 = add(list, el('li'));
+    step1.appendChild(document.createTextNode('Tap the Share button '));
+    shareGlyph(step1);
+    step1.appendChild(document.createTextNode(' in the Safari toolbar.'));
+    add(list, el('li', '', 'Scroll down and tap "Add to Home Screen".'));
+    add(list, el('li', '', 'The name is already filled in as ' + label + '. Tap "Add".'));
+    return list;
+  }
+  add(list, el('li', '', 'Open the browser menu.'));
+  add(list, el('li', '', 'Choose "Add to Home screen" (Chrome and Edge) or "Install" (Firefox).'));
+  add(list, el('li', '', 'Confirm. It lands on the home screen as ' + label + '.'));
+  return list;
+}
+
+/* The whole toolkit as one icon. Individual tools are picked on the home
+   screen itself - long-press a tile - rather than in a second list here. */
+function installWholeToolkit() {
+  if (deferredPrompt) {
+    var prompt = deferredPrompt;
+    deferredPrompt = null;
+    closeSheet();
+    try {
+      prompt.prompt();
+      return;
+    } catch (e) { /* the prompt was already used or refused - show the steps */ }
+  }
+  go('');
+  renderInstallWalkthrough([{ id: '', name: 'DevOps Toolkit' }]);
+}
+
+function renderInstallWalkthrough(queue) {
+  if (queue) {
+    installQueue = queue;
+    installStep = 0;
+  }
+  var body = sheetBody();
+  if (!body) return;
+
+  if (installStep >= installQueue.length) {
+    add(body, el('h2', '', 'That is all of them'));
+    add(body, el('p', '', 'Drag the new icons on top of each other to put them in a folder - your phone makes the folder, and can name it whatever you like. A web page cannot do that part for you.'));
+    var doneRow = buttonRow(body);
+    button(doneRow, 'Close', function () {
+      installQueue = [];
+      installStep = 0;
+      closeSheet();
+    }, 'primary');
+    button(doneRow, 'Pick more', function () {
+      closeSheet();
+      go('');
+      enterSelectMode('');
+    });
+    return;
+  }
+
+  var current = installQueue[installStep];
+  add(body, el('h2', '', 'Add ' + current.name));
+  if (installQueue.length > 1) {
+    add(body, el('p', 'note', 'Step ' + (installStep + 1) + ' of ' + installQueue.length + '.'));
+  }
+  addSteps(body, JSON.stringify(current.name));
+
+  /* one row: the tool name and the word "next" drop away on a narrow screen
+     rather than pushing the buttons onto a second line */
+  var row = buttonRow(body);
+  var openBtn = button(row, '', function () {
+    go(current.id);
+    closeSheet();
+    toast(isIOS() ? 'Now: Share, then Add to Home Screen' : 'Now: browser menu, then Add to Home screen');
+  }, 'primary');
+  clear(openBtn);
+  add(openBtn, el('span', '', 'Open'));
+  add(openBtn, el('span', 'wideword', ' ' + current.name));
+
+  var nextBtn = button(row, '', function () {
+    installStep++;
+    renderInstallWalkthrough();
+  });
+  clear(nextBtn);
+  add(nextBtn, el('span', '', 'Added'));
+  add(nextBtn, el('span', 'wideword', ' - next'));
+
+  button(row, 'Skip', function () {
+    installStep++;
+    renderInstallWalkthrough();
+  });
+
+  add(body, el('p', 'note', 'Reopen Install at any point to carry on where you left off.'));
+}
+
+function openInstallSheet() {
+  if (installQueue.length && installStep < installQueue.length) renderInstallWalkthrough();
+  else installWholeToolkit();
+}
+
+function onInstallClick() {
+  /* Picking several tools happens on the home screen, so the button only ever
+     has one job here: whatever is in front of you. */
+  if (selectMode) {
+    var chosen = selectedTools();
+    if (!chosen.length) {
+      toast('Tap at least one tool first');
+      return;
+    }
+    exitSelectMode();
+    renderInstallWalkthrough(chosen);
+    return;
+  }
+  if (currentId) {
+    renderInstallWalkthrough([TOOL_BY_ID[currentId]]);
+    return;
+  }
+  openInstallSheet();
+}
+
+/* ---------- boot ---------- */
+
+function boot() {
+  var search = document.getElementById('search');
+  var back = document.getElementById('back');
+  var install = document.getElementById('install');
+  var sheet = document.getElementById('sheet');
+
+  renderHome('');
+
+  if (search) {
+    on(search, 'input', function () { renderHome(search.value); });
+  }
+  if (back) {
+    on(back, 'click', function () {
+      if (typeof history !== 'undefined' && history.length > 1 && typeof history.back === 'function') history.back();
+      else go('');
+    });
+  }
+  if (install) on(install, 'click', onInstallClick);
+  var modeBtn = document.getElementById('selectmode');
+  if (modeBtn) {
+    on(modeBtn, 'click', function () {
+      if (selectMode) exitSelectMode();
+      else enterSelectMode('');
+    });
+  }
+  if (sheet) {
+    on(sheet, 'click', function (event) {
+      if (event && event.target === sheet) closeSheet();
+    });
+  }
+
+  on(document, 'keydown', function (event) {
+    if (!event) return;
+    if (event.key === 'Escape') {
+      var sheetNode = document.getElementById('sheet');
+      if (sheetNode && !sheetNode.hidden) { closeSheet(); return; }
+      if (selectMode) { exitSelectMode(); return; }
+      if (currentId) go('');
+      return;
+    }
+    if (event.key === '/' && search && document.activeElement !== search) {
+      var tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (currentId) go('');
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      if (typeof search.focus === 'function') search.focus();
+    }
+  });
+
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('hashchange', routeFromHash);
+    window.addEventListener('beforeinstallprompt', function (event) {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      deferredPrompt = event;
+      updateInstallButton();
+    });
+    window.addEventListener('appinstalled', function () {
+      deferredPrompt = null;
+      updateInstallButton();
+    });
+  }
+
+  var stored = loadPrefs();
+  var routed = routeFromHash();
+  if (!currentId && stored.tool && (typeof location === 'undefined' || !location.hash || location.hash === '#/')) {
+    go(stored.tool);
+  } else if (routed === undefined) {
+    goHome();
+  }
+
+  updateInstallButton();
+
+  if (typeof navigator !== 'undefined' && navigator.serviceWorker && typeof navigator.serviceWorker.register === 'function') {
+    navigator.serviceWorker.register('./sw.js').then(function () {
+      navigator.serviceWorker.ready.then(function () {
+        swReady = true;
+        updateInstallButton();
+      });
+    }).catch(function () { /* file:// and private modes refuse - that is fine */ });
+  }
+}
+
+window.APP = {
+  tools: TOOLS,
+  byId: TOOL_BY_ID,
+  panels: PANELS,
+  open: openTool,
+  home: goHome,
+  route: routeFromHash,
+  renderHome: renderHome,
+  current: function () { return currentId; },
+  panel: function (id) { return PANELS[id]; },
+  prefKey: PREF_KEY,
+  loadPrefs: loadPrefs,
+  savePrefs: savePrefs,
+  installSheet: openInstallSheet,
+  installWalkthrough: renderInstallWalkthrough,
+  installPicks: function () { return installPicks; },
+  enterSelectMode: enterSelectMode,
+  exitSelectMode: exitSelectMode,
+  toggleSelect: toggleSelect,
+  selectMode: function () { return selectMode; },
+  selected: function () { return selectedTools().map(function (tool) { return tool.id; }); },
+  longPressMs: LONG_PRESS_MS,
+  closeSheet: closeSheet,
+  boot: boot
+};
+
+if (typeof document !== 'undefined' && document.getElementById && document.getElementById('grid')) boot();
+</script>
+</body>
+</html>
