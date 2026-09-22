@@ -1,5 +1,7 @@
 # DevOps Pocket Toolkit
 
+**[sergeyitaly.github.io/devops-toolkit](https://sergeyitaly.github.io/devops-toolkit/)**
+
 Twelve DevOps utilities in one HTML page. No backend, no accounts, no build
 step to use it, no network once it has loaded. Add it to a phone home screen
 and it behaves like an app - including on a plane, in a basement datacentre, or
@@ -7,6 +9,13 @@ on a locked-down laptop.
 
 The page is 162 KB. With the service worker, the manifest and every icon - one
 for the toolkit and one for each tool - the whole app is 270 KB.
+
+| | |
+|---|---|
+| ![The home screen in dark mode: a 3 x 4 grid of twelve tool icons](docs/home-dark.png) | ![The same home screen in light mode](docs/home-light.png) |
+
+The whole toolkit on opening: twelve tools, one screenful, in whichever theme
+the device is set to.
 
 ## The tools
 
@@ -25,9 +34,8 @@ for the toolkit and one for each tool - the whole app is 270 KB.
 | JSON Formatter | Pretty-print, minify, sort keys, structure statistics, and syntax errors reported with a line, a column and the offending line. |
 | YAML Validator | Errors by line, warnings for the traps that bite in production (`no` parsed as a boolean, `3.10` losing its zero, `0755` read as octal, duplicate keys, tab indentation), and the JSON the document actually means. |
 
-The home screen is a 3 x 4 grid of the twelve tools, each with its own icon -
-one screenful, no scrolling to find anything. A search box narrows it, and the
-one-line descriptions appear on wider screens where there is room for them.
+A search box narrows the grid, and the one-line descriptions appear on wider
+screens where there is room for them.
 
 Everything runs in the tab. Nothing you paste - tokens, secrets, manifests -
 leaves the device.
@@ -68,6 +76,9 @@ Two places a static page cannot follow the setting:
 
 ## Installing it
 
+Open <https://sergeyitaly.github.io/devops-toolkit/> once with a connection -
+that first load is what fills the offline cache, including every tool icon.
+
 **Long-press any tool** on the home screen to start picking - the same gesture
 a phone uses for choosing icons. Tiles get a selection dot, tapping adds or
 removes one, and a bar at the bottom says how many are chosen. "Add to home
@@ -94,9 +105,6 @@ system can, and only when you drag one icon onto another. What this app can do
 is give each tool its own icon and name, so the folder you make yourself looks
 like a real set of apps. The install sheet says exactly that rather than
 pretending otherwise.
-
-Load the page once with a network connection before you rely on it offline:
-that first load is what fills the cache, including every tool icon.
 
 ### After an update
 

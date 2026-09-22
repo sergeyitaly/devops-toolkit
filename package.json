@@ -4,6 +4,11 @@
   "private": true,
   "description": "Twelve offline DevOps utilities in one installable HTML page.",
   "license": "MIT",
+  "homepage": "https://sergeyitaly.github.io/devops-toolkit/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sergeyitaly/devops-toolkit.git"
+  },
   "scripts": {
     "build": "node tools/build.mjs && node tools/csp.mjs",
     "test": "node test/engine.test.js && node test/ui.test.js && node test/security.test.js && node tools/build.mjs --check && node tools/csp.mjs --check && node tools/tool-icons.mjs --check",
